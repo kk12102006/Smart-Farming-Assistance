@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Smart Farm - Farm Location</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+    <div class="container">
+
+        <div class="card">
+
+            <h1>🌾 Smart Farm Assistant</h1>
+
+            <p class="subtitle">
+                Enter the location of your farm
+            </p>
+
+
+            {% if not submitted %}
+
+            <form method="POST">
+
+                <label for="location">
+                    Farm Location
+                </label>
+
+                <input
+                    type="text"
+                    id="location"
+                    name="location"
+                    placeholder="Example: Mysuru, Karnataka"
+                    required
+                >
+
+                <button type="submit">
+                    Continue
+                </button>
+
+            </form>
+
+
+            {% else %}
+
+            <div class="result">
+
+                <h2>📍 Farm Location</h2>
+
+                <p>
+                    {{ location }}
+                </p>
+
+                <div class="success">
+                    Location successfully recorded!
+                </div>
+
+            </div>
+
+            {% endif %}
+
+
+            {% if error %}
+
+            <p class="error">
+                {{ error }}
+            </p>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>

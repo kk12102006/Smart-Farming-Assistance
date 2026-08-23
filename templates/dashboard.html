@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Smart Farm Dashboard</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .location {
+            text-align: center;
+            color: #555;
+            margin-bottom: 25px;
+        }
+
+        .status {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(250px, 1fr));
+
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow:
+                0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .card h2 {
+            margin-top: 0;
+        }
+
+        .big {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .actions {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            box-shadow:
+                0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .actions li {
+            margin: 10px 0;
+        }
+
+        .button-container {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 12px 20px;
+            margin: 5px;
+            background: #2e7d32;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+        }
+
+        .button:hover {
+            background: #1b5e20;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+    <h1>🌾 Smart Farm Dashboard</h1>
+
+    <div class="location">
+
+        {% if farm_location %}
+
+            📍 Farm:
+            <strong>{{ farm_location }}</strong>
+
+        {% else %}
+
+            📍 Farm location not entered
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- OVERALL STATUS -->
+
+    <div class="status">
+
+        <div class="big">
+
+            {{ overall_icon }}
+            {{ overall_status }}
+
+        </div>
+
+    </div>
+
+
+    <div class="cards">
+
+
+        <!-- CROP -->
+
+        <div class="card">
+
+            <h2>🌱 Crop</h2>
+
+            {% if crop_name %}
+
+                <p>
+                    <strong>Crop:</strong>
+                    {{ crop_name }}
+                </p>
+
+                <p>
+                    <strong>Current Week:</strong>
+                    {{ crop_week }}
+                </p>
+
+                <p>
+                    <strong>Plant Height:</strong>
+                    {{ plant_height }} cm
+                </p>
+
+            {% else %}
+
+                <p>
+                    No monitoring record available.
+                </p>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- HEALTH -->
+
+        <div class="card">
+
+            <h2>🩺 Crop Health</h2>
+
+            <div class="big">
+
+                {{ health_icon }}
+                {{ health_status }}
+
+            </div>
+
+            <p>
+                {{ health_message }}
+            </p>
+
+        </div>
+
+
+        <!-- WEATHER -->
+
+        <div class="card">
+
+            <h2>🌦 Weather</h2>
+
+            {% if temperature is not none %}
+
+                <p>
+                    Temperature:
+                    <strong>
+                        {{ temperature }} °C
+                    </strong>
+                </p>
+
+                <p>
+                    Humidity:
+                    <strong>
+                        {{ humidity }} %
+                    </strong>
+                </p>
+
+                <p>
+                    Tomorrow rain probability:
+                    <strong>
+                        {{ rain_probability }} %
+                    </strong>
+                </p>
+
+                <p>
+                    Expected rainfall:
+                    <strong>
+                        {{ tomorrow_rainfall }} mm
+                    </strong>
+                </p>
+
+            {% else %}
+
+                <p>
+                    Weather data not available.
+                </p>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- IRRIGATION -->
+
+        <div class="card">
+
+            <h2>💧 Irrigation</h2>
+
+            <div class="big">
+
+                {{ irrigation_status }}
+
+            </div>
+
+            <p>
+                {{ irrigation_advice }}
+            </p>
+
+        </div>
+
+
+        <!-- GROWTH -->
+
+        <div class="card">
+
+            <h2>📈 Growth</h2>
+
+            {% if growth_message %}
+
+                <p>
+                    {{ growth_message }}
+                </p>
+
+            {% else %}
+
+                <p>
+                    Add at least two weekly
+                    monitoring records to
+                    compare growth.
+                </p>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- HARVEST -->
+
+        <div class="card">
+
+            <h2>🌾 Harvest</h2>
+
+            <div class="big">
+
+                {{ harvest_status }}
+
+            </div>
+
+            {% if harvest_week %}
+
+                <p>
+                    Expected harvest:
+                    Week {{ harvest_week }}
+                </p>
+
+            {% endif %}
+
+            {% if remaining_weeks is not none %}
+
+                <p>
+                    Approximately
+                    <strong>
+                        {{ remaining_weeks }}
+                    </strong>
+                    weeks remaining.
+                </p>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- PLANT ANALYSIS -->
+
+        <div class="card">
+
+            <h2>📷 Plant Analysis</h2>
+
+            {% if plant_identification %}
+
+                <p>
+                    <strong>Observation:</strong>
+                    {{ plant_identification }}
+                </p>
+
+                <p>
+                    <strong>Analysis:</strong>
+                    {{ disease_analysis }}
+                </p>
+
+            {% else %}
+
+                <p>
+                    Upload a crop image through
+                    weekly monitoring.
+                </p>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <!-- ACTION PLAN -->
+
+    <div class="actions">
+
+        <h2>👨‍🌾 What To Do Today</h2>
+
+        <ul>
+
+            {% for action in action_plan %}
+
+                <li>{{ action }}</li>
+
+            {% endfor %}
+
+        </ul>
+
+    </div>
+
+
+    <!-- NAVIGATION -->
+
+    <div class="button-container">
+
+        <a href="/" class="button">
+            📍 Location
+        </a>
+
+        <a href="/weather" class="button">
+            🌦 Weather
+        </a>
+
+        <a href="/crops" class="button">
+            🌱 Crop Recommendation
+        </a>
+
+        <a href="/monitor" class="button">
+            📷 Monitoring
+        </a>
+
+        <a href="/yield" class="button">
+            🌾 Yield
+        </a>
+
+        <a href="/advisory" class="button">
+            👨‍🌾 Advisory
+        </a>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

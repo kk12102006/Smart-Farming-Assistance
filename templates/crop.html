@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Smart Farm - Crop Recommendation
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+
+<body>
+
+    <div class="container">
+
+        <div class="card">
+
+            <h1>
+                🌱 Crop Recommendation
+            </h1>
+
+            <p class="subtitle">
+                Find suitable crops for your farm
+            </p>
+
+
+            <!-- =================================================
+                 INPUT FORM
+            ================================================== -->
+
+            {% if not submitted %}
+
+            <form method="POST">
+
+
+                <!-- SOIL TYPE -->
+
+                <label for="soil_type">
+                    Soil Type
+                </label>
+
+                <select
+                    id="soil_type"
+                    name="soil_type"
+                    required
+                >
+
+                    <option value="">
+                        Select soil type
+                    </option>
+
+                    <option value="red">
+                        Red Soil
+                    </option>
+
+                    <option value="black">
+                        Black Soil
+                    </option>
+
+                    <option value="loamy">
+                        Loamy Soil
+                    </option>
+
+                    <option value="sandy">
+                        Sandy Soil
+                    </option>
+
+                    <option value="clay">
+                        Clay Soil
+                    </option>
+
+                    <option value="alluvial">
+                        Alluvial Soil
+                    </option>
+
+                </select>
+
+
+                <!-- SOIL pH -->
+
+                <label for="ph">
+                    Soil pH
+                </label>
+
+                <input
+                    type="number"
+                    id="ph"
+                    name="ph"
+                    step="0.1"
+                    min="0"
+                    max="14"
+                    placeholder="Example: 6.5"
+                    required
+                >
+
+
+                <!-- IRRIGATION -->
+
+                <label for="irrigation">
+                    Irrigation Availability
+                </label>
+
+                <select
+                    id="irrigation"
+                    name="irrigation"
+                    required
+                >
+
+                    <option value="">
+                        Select option
+                    </option>
+
+                    <option value="available">
+                        Irrigation Available
+                    </option>
+
+                    <option value="rainfed">
+                        Rainfed
+                    </option>
+
+                </select>
+
+
+                <!-- FARM AREA -->
+
+                <label for="farm_area">
+                    Farm Area (acres)
+                </label>
+
+                <input
+                    type="number"
+                    id="farm_area"
+                    name="farm_area"
+                    step="0.1"
+                    min="0.1"
+                    placeholder="Example: 2"
+                    required
+                >
+
+
+                <!-- SEASON -->
+
+                <label for="season">
+                    Growing Season
+                </label>
+
+                <select
+                    id="season"
+                    name="season"
+                    required
+                >
+
+                    <option value="">
+                        Select season
+                    </option>
+
+                    <option value="kharif">
+                        🌧️ Kharif
+                    </option>
+
+                    <option value="rabi">
+                        ❄️ Rabi
+                    </option>
+
+                </select>
+
+
+                <button type="submit">
+                    Recommend Crops
+                </button>
+
+            </form>
+
+
+            <!-- =================================================
+                 RESULTS
+            ================================================== -->
+
+            {% else %}
+
+
+            <div class="farm-summary">
+
+                <h2>
+                    🌾 Farm Information
+                </h2>
+
+
+                <p>
+                    <strong>Soil:</strong>
+                    {{ soil_type }}
+                </p>
+
+
+                <p>
+                    <strong>Soil pH:</strong>
+                    {{ ph }}
+                </p>
+
+
+                <p>
+                    <strong>Irrigation:</strong>
+                    {{ irrigation }}
+                </p>
+
+
+                <p>
+                    <strong>Farm Area:</strong>
+                    {{ farm_area }} acres
+                </p>
+
+
+                <p>
+                    <strong>Season:</strong>
+
+                    {% if season == "kharif" %}
+
+                        🌧️ Kharif
+
+                    {% else %}
+
+                        ❄️ Rabi
+
+                    {% endif %}
+
+                </p>
+
+            </div>
+
+
+            <!-- =================================================
+                 RECOMMENDATIONS
+            ================================================== -->
+
+            <h2 class="recommendation-heading">
+
+                🌱 Recommended
+                {% if season == "kharif" %}
+                    Kharif
+                {% else %}
+                    Rabi
+                {% endif %}
+                Crops
+
+            </h2>
+
+
+            {% if recommendations %}
+
+
+                {% for crop in recommendations %}
+
+                <div class="crop-card">
+
+
+                    <h3>
+
+                        {{ loop.index }}.
+                        {{ crop.name }}
+
+                    </h3>
+
+
+                    <p>
+
+                        Compatibility Score:
+
+                        <strong>
+
+                            {{ crop.score }}/8
+
+                        </strong>
+
+                    </p>
+
+
+                    {% if crop.reasons %}
+
+                    <ul>
+
+                        {% for reason in crop.reasons %}
+
+                        <li>
+
+                            ✓ {{ reason }}
+
+                        </li>
+
+                        {% endfor %}
+
+                    </ul>
+
+                    {% else %}
+
+                    <p>
+
+                        Limited matching information.
+
+                    </p>
+
+                    {% endif %}
+
+
+                </div>
+
+                {% endfor %}
+
+
+            {% else %}
+
+
+                <div class="no-results">
+
+                    <h3>
+                        No suitable crops found
+                    </h3>
+
+                    <p>
+                        Try checking the soil information,
+                        pH value or irrigation condition.
+                    </p>
+
+                </div>
+
+
+            {% endif %}
+
+
+            <!-- =================================================
+                 DISCLAIMER
+            ================================================== -->
+
+            <div class="disclaimer">
+
+                ⚠️
+
+                This is a basic prototype recommendation
+                based on the information entered.
+
+                It should not replace advice from an
+                agricultural expert or soil testing
+                laboratory.
+
+            </div>
+
+
+            {% endif %}
+
+
+            <!-- ERROR MESSAGE -->
+
+            {% if error %}
+
+            <p class="error">
+
+                {{ error }}
+
+            </p>
+
+            {% endif %}
+
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>

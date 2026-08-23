@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Smart Farm - Yield Prediction
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+<div class="card">
+
+
+    <h1>
+
+        🌾 Crop Yield Prediction
+
+    </h1>
+
+
+    <p class="subtitle">
+
+        Estimate your expected crop production
+
+    </p>
+
+
+    <!-- ==========================================
+         ERROR
+    =========================================== -->
+
+    {% if error %}
+
+    <div class="error">
+
+        {{ error }}
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- ==========================================
+         FORM
+    =========================================== -->
+
+    <form
+        method="POST"
+    >
+
+
+        <!-- CROP -->
+
+        <label for="crop_name">
+
+            Crop Name
+
+        </label>
+
+
+        <input
+            type="text"
+            id="crop_name"
+            name="crop_name"
+            placeholder="Example: Ragi"
+            required
+        >
+
+
+        <!-- FARM AREA -->
+
+        <label for="farm_area">
+
+            Farm Area (acres)
+
+        </label>
+
+
+        <input
+            type="number"
+            id="farm_area"
+            name="farm_area"
+            step="0.01"
+            min="0.01"
+            placeholder="Example: 2"
+            required
+        >
+
+
+        <!-- CROP WEEK -->
+
+        <label for="crop_week">
+
+            Current Crop Week
+
+        </label>
+
+
+        <input
+            type="number"
+            id="crop_week"
+            name="crop_week"
+            min="1"
+            placeholder="Example: 10"
+            required
+        >
+
+
+        <!-- CURRENT HEIGHT -->
+
+        <label for="plant_height">
+
+            Current Plant Height (cm)
+
+        </label>
+
+
+        <input
+            type="number"
+            id="plant_height"
+            name="plant_height"
+            step="0.1"
+            min="0"
+            placeholder="Example: 85"
+            required
+        >
+
+
+        <!-- EXPECTED HEIGHT -->
+
+        <label for="expected_height">
+
+            Expected Plant Height at Maturity (cm)
+
+        </label>
+
+
+        <input
+            type="number"
+            id="expected_height"
+            name="expected_height"
+            step="0.1"
+            min="1"
+            placeholder="Example: 100"
+            required
+        >
+
+
+        <!-- HEALTH -->
+
+        <label for="health_condition">
+
+            Overall Crop Health
+
+        </label>
+
+
+        <select
+            id="health_condition"
+            name="health_condition"
+            required
+        >
+
+            <option value="">
+
+                Select crop health
+
+            </option>
+
+
+            <option value="healthy">
+
+                🟢 Healthy
+
+            </option>
+
+
+            <option value="slightly_unhealthy">
+
+                🟡 Slightly Unhealthy
+
+            </option>
+
+
+            <option value="moderate">
+
+                🟠 Moderate
+
+            </option>
+
+
+            <option value="poor">
+
+                🔴 Poor
+
+            </option>
+
+        </select>
+
+
+        <button type="submit">
+
+            📊 Predict Yield
+
+        </button>
+
+
+    </form>
+
+
+    <!-- ==========================================
+         RESULTS
+    =========================================== -->
+
+    {% if success %}
+
+
+    <div class="yield-result">
+
+
+        <h2>
+
+            🌾 Yield Prediction
+
+        </h2>
+
+
+        <div class="yield-main">
+
+            {{ total_yield_tonnes }}
+
+            <span>
+
+                tonnes
+
+            </span>
+
+        </div>
+
+
+        <p>
+
+            Approximately
+
+            <strong>
+
+                {{ total_yield_kg }} kg
+
+            </strong>
+
+            of crop may be produced.
+
+        </p>
+
+
+        <hr>
+
+
+        <p>
+
+            <strong>
+                Crop:
+            </strong>
+
+            {{ crop_name }}
+
+        </p>
+
+
+        <p>
+
+            <strong>
+                Farm Area:
+            </strong>
+
+            {{ farm_area }} acres
+
+        </p>
+
+
+        <p>
+
+            <strong>
+                Estimated Yield:
+            </strong>
+
+            {{ estimated_yield_per_hectare }}
+
+            tonnes/hectare
+
+        </p>
+
+
+        <p>
+
+            <strong>
+                Growth Status:
+            </strong>
+
+            {{ growth_status }}
+
+        </p>
+
+
+        <p>
+
+            <strong>
+                Expected Harvest:
+            </strong>
+
+            Week {{ harvest_week }}
+
+        </p>
+
+
+        <div class="harvest-message">
+
+            📅 {{ harvest_message }}
+
+        </div>
+
+
+        <p>
+
+            <strong>
+                Prototype Confidence:
+            </strong>
+
+            {{ confidence }}%
+
+        </p>
+
+
+    </div>
+
+
+    <!-- ==========================================
+         DISCLAIMER
+    =========================================== -->
+
+    <div class="yield-warning">
+
+        ⚠️ <strong>Important:</strong>
+
+        This is a prototype estimation based on
+        crop type, farm area, plant growth and
+        health condition. Actual yield depends on
+        weather, soil nutrients, pests, diseases,
+        farming practices and many other factors.
+
+    </div>
+
+
+    {% endif %}
+
+
+</div>
+
+
+</div>
+
+
+</body>
+
+</html>

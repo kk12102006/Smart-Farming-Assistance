@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Smart Farm - Crop Monitoring
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+<div class="card">
+
+
+    <!-- =================================================
+         TITLE
+    ================================================== -->
+
+    <h1>
+        📷 Weekly Crop Monitoring
+    </h1>
+
+    <p class="subtitle">
+        Track your crop's growth every week
+    </p>
+
+
+    <!-- =================================================
+         ERROR
+    ================================================== -->
+
+    {% if error %}
+
+    <div class="error">
+
+        {{ error }}
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- =================================================
+         SUCCESS
+    ================================================== -->
+
+    {% if success %}
+
+    <div class="success">
+
+        ✅ Weekly monitoring record saved successfully.
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- =================================================
+         GROWTH MESSAGE
+    ================================================== -->
+
+    {% if growth_message %}
+
+    <div class="growth-message">
+
+        🌱 {{ growth_message }}
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- =================================================
+         MONITORING FORM
+    ================================================== -->
+
+    <form
+        method="POST"
+        enctype="multipart/form-data"
+    >
+
+
+        <!-- CROP NAME -->
+
+        <label for="crop_name">
+
+            Crop Name
+
+        </label>
+
+        <input
+            type="text"
+            id="crop_name"
+            name="crop_name"
+            placeholder="Example: Ragi"
+            required
+        >
+
+
+        <!-- CROP WEEK -->
+
+        <label for="crop_week">
+
+            Crop Age / Week
+
+        </label>
+
+        <input
+            type="number"
+            id="crop_week"
+            name="crop_week"
+            min="1"
+            placeholder="Example: 4"
+            required
+        >
+
+
+        <!-- PLANT HEIGHT -->
+
+        <label for="plant_height">
+
+            Average Plant Height (cm)
+
+        </label>
+
+        <input
+            type="number"
+            id="plant_height"
+            name="plant_height"
+            step="0.1"
+            min="0"
+            placeholder="Example: 32.5"
+            required
+        >
+
+
+        <!-- LEAF CONDITION -->
+
+        <label for="leaf_condition">
+
+            Leaf Condition
+
+        </label>
+
+        <select
+            id="leaf_condition"
+            name="leaf_condition"
+            required
+        >
+
+            <option value="">
+
+                Select condition
+
+            </option>
+
+            <option value="healthy">
+
+                🟢 Healthy
+
+            </option>
+
+            <option value="slightly_yellow">
+
+                🟡 Slightly Yellow
+
+            </option>
+
+            <option value="yellow">
+
+                🟠 Yellow
+
+            </option>
+
+            <option value="dry">
+
+                🔴 Dry / Wilting
+
+            </option>
+
+            <option value="spots">
+
+                🟤 Spots / Marks
+
+            </option>
+
+        </select>
+
+
+        <!-- PLANT PROBLEM -->
+
+        <label for="plant_problem">
+
+            Visible Problem
+
+        </label>
+
+        <select
+            id="plant_problem"
+            name="plant_problem"
+        >
+
+            <option value="none">
+
+                No obvious problem
+
+            </option>
+
+            <option value="pest">
+
+                Possible pest attack
+
+            </option>
+
+            <option value="disease">
+
+                Possible disease
+
+            </option>
+
+            <option value="water">
+
+                Possible water stress
+
+            </option>
+
+            <option value="nutrient">
+
+                Possible nutrient deficiency
+
+            </option>
+
+            <option value="unknown">
+
+                Unknown problem
+
+            </option>
+
+        </select>
+
+
+        <!-- IMAGE -->
+
+        <label for="plant_image">
+
+            Upload Crop Image
+
+        </label>
+
+        <input
+            type="file"
+            id="plant_image"
+            name="plant_image"
+            accept="image/*"
+        >
+
+
+        <p class="input-help">
+
+            Take a clear photo of the plant
+            from a similar angle every week.
+
+        </p>
+
+
+        <!-- NOTES -->
+
+        <label for="farmer_notes">
+
+            Farmer's Notes
+
+        </label>
+
+        <textarea
+            id="farmer_notes"
+            name="farmer_notes"
+            rows="4"
+            placeholder="Example: Leaves look slightly yellow after heavy rain."
+        ></textarea>
+
+
+        <!-- SUBMIT -->
+
+        <button type="submit">
+
+            Save Weekly Report
+
+        </button>
+
+
+    </form>
+
+
+    <!-- =================================================
+         PREVIOUS RECORDS
+    ================================================== -->
+
+    {% if records %}
+
+    <div class="monitoring-history">
+
+        <h2>
+
+            📊 Monitoring History
+
+        </h2>
+
+
+        {% for record in records|reverse %}
+
+        <div class="monitoring-record">
+
+
+            <h3>
+
+                Week {{ record.week }}
+
+                -
+
+                {{ record.crop_name }}
+
+            </h3>
+
+
+            <p>
+
+                <strong>
+                    Date:
+                </strong>
+
+                {{ record.date }}
+
+            </p>
+
+
+            <p>
+
+                <strong>
+                    Plant Height:
+                </strong>
+
+                {{ record.plant_height }} cm
+
+            </p>
+
+
+            <p>
+
+                <strong>
+                    Leaf Condition:
+                </strong>
+
+                {{ record.leaf_condition }}
+
+            </p>
+
+
+            <p>
+
+                <strong>
+                    Visible Problem:
+                </strong>
+
+                {{ record.plant_problem }}
+
+            </p>
+
+
+            {% if record.notes %}
+
+            <p>
+
+                <strong>
+                    Notes:
+                </strong>
+
+                {{ record.notes }}
+
+            </p>
+
+            {% endif %}
+
+
+            {% if record.image %}
+
+            <p>
+
+                📷
+
+                Image uploaded:
+
+                {{ record.image }}
+
+            </p>
+
+            {% endif %}
+
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- =================================================
+         INFORMATION
+    ================================================== -->
+
+    <div class="monitoring-info">
+
+        <h3>
+
+            💡 Monitoring Tip
+
+        </h3>
+
+        <p>
+
+            Try to photograph the crop from a
+            similar distance and angle every week.
+            This will make future automated growth
+            analysis more useful.
+
+        </p>
+
+    </div>
+
+
+</div>
+
+</div>
+
+</body>
+
+</html>

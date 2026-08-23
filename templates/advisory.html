@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>
+        Smart Farm - Farmer Advisory
+    </title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+
+<body>
+
+
+    <div class="container">
+
+
+        <div class="card">
+
+
+            <h1>
+
+                👨‍🌾 Farmer Advisory
+
+            </h1>
+
+
+            <p class="subtitle">
+
+                Simple recommendations for better crop management
+
+            </p>
+
+
+            <!-- ERROR -->
+
+            {% if error %}
+
+            <div class="error">
+
+                {{ error }}
+
+            </div>
+
+            {% endif %}
+
+
+            <!-- =========================================
+         INPUT FORM
+    ========================================== -->
+
+            <form method="POST">
+
+
+                <label for="crop_name">
+
+                    Crop Name
+
+                </label>
+
+
+                <input type="text" id="crop_name" name="crop_name" placeholder="Example: Ragi" required>
+
+
+                <label for="crop_week">
+
+                    Current Crop Week
+
+                </label>
+
+
+                <input type="number" id="crop_week" name="crop_week" min="1" placeholder="Example: 10" required>
+
+
+                <label for="health_condition">
+
+                    Current Crop Health
+
+                </label>
+
+
+                <select id="health_condition" name="health_condition" required>
+
+                    <option value="">
+
+                        Select health condition
+
+                    </option>
+
+
+                    <option value="healthy">
+
+                        🟢 Healthy
+
+                    </option>
+
+
+                    <option value="slightly_unhealthy">
+
+                        🟡 Slightly Unhealthy
+
+                    </option>
+
+
+                    <option value="moderate">
+
+                        🟠 Moderate Stress
+
+                    </option>
+
+
+                    <option value="poor">
+
+                        🔴 Poor
+
+                    </option>
+
+                </select>
+
+
+                <label for="rain_forecast">
+
+                    Expected Rainfall
+
+                </label>
+
+
+                <select id="rain_forecast" name="rain_forecast" required>
+
+                    <option value="">
+
+                        Select rainfall condition
+
+                    </option>
+
+
+                    <option value="heavy">
+
+                        🌧️ Heavy Rain
+
+                    </option>
+
+
+                    <option value="moderate">
+
+                        🌦️ Moderate Rain
+
+                    </option>
+
+
+                    <option value="light">
+
+                        🌦️ Light Rain
+
+                    </option>
+
+
+                    <option value="none">
+
+                        ☀️ Little / No Rain
+
+                    </option>
+
+                </select>
+
+
+                <button type="submit">
+
+                    🌾 Generate Advisory
+
+                </button>
+
+
+            </form>
+
+
+            <!-- =========================================
+         ADVISORY RESULTS
+    ========================================== -->
+
+            {% if success %}
+
+
+            <div class="advisory-dashboard">
+
+
+                <h2>
+
+                    📋 Farm Advisory
+
+                </h2>
+
+
+            <p>
+
+                    <strong>Crop:</strong>
+
+                    {{ crop_name }}
+
+                </p>
+
+
+                <p>
+
+                    <strong>Current Week:</strong>
+
+                    {{ crop_week }}
+
+                </p>
+
+
+                <!-- HARVEST -->
+
+                <div class="advisory-box">
+
+                    <h3>
+
+                        🌾 Harvest Planning
+
+                    </h3>
+
+
+                    <p>
+
+                        <strong>
+
+                            Status:
+
+                        </strong>
+
+                        {{ harvest_status }}
+
+                    </p>
+
+
+                    <p>
+
+                        {{ harvest_advice }}
+
+                    </p>
+
+                </div>
+
+
+                <!-- IRRIGATION -->
+
+                <div class="advisory-box">
+
+                    <h3>
+
+                        💧 Irrigation Advice
+
+                    </h3>
+
+
+                    <p>
+
+                        <strong>
+
+                            Status:
+
+                        </strong>
+
+                        {{ irrigation_status }}
+
+                    </p>
+
+
+                    <p>
+
+                        {{ irrigation_advice }}
+
+                    </p>
+
+                </div>
+
+
+                <!-- HEALTH -->
+
+                <div class="advisory-box">
+
+                    <h3>
+
+                        🌱 Crop Health
+
+                    </h3>
+
+
+                    <p>
+
+                        <strong>
+
+                            Status:
+
+                        </strong>
+
+                        {{ health_status }}
+
+                    </p>
+
+
+                    <p>
+
+                        {{ health_advice }}
+
+                    </p>
+
+                </div>
+
+
+                <!-- GENERAL -->
+
+                <div class="advisory-box">
+
+                    <h3>
+
+                        👨‍🌾 Recommended Actions
+
+                    </h3>
+
+
+                    <ul>
+
+                        {% for advice in general_advice %}
+
+                        <li>
+
+                            {{ advice }}
+
+                        </li>
+
+                        {% endfor %}
+
+                    </ul>
+
+                </div>
+
+
+            </div>
+
+
+            <!-- DISCLAIMER -->
+
+            <div class="advisory-warning">
+
+                ⚠️ These recommendations are generated
+                using a prototype rule-based system.
+                They are intended to support decision-making
+                and should not replace advice from qualified
+                agricultural experts.
+
+            </div>
+
+
+            {% endif %}
+
+
+        </div>
+
+
+    </div>
+
+
+</body>
+
+</html>

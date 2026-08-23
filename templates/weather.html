@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Smart Farm - Weather</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+
+<body>
+
+    <div class="container">
+
+        <div class="card">
+
+            <h1>🌦️ Farm Weather</h1>
+
+            <p class="subtitle">
+                Check weather conditions for your farm
+            </p>
+
+
+            {% if not submitted %}
+
+            <form method="POST">
+
+                <label for="latitude">
+                    Latitude
+                </label>
+
+                <input
+                    type="number"
+                    step="any"
+                    id="latitude"
+                    name="latitude"
+                    placeholder="Example: 12.2958"
+                    required
+                >
+
+
+                <label for="longitude">
+                    Longitude
+                </label>
+
+                <input
+                    type="number"
+                    step="any"
+                    id="longitude"
+                    name="longitude"
+                    placeholder="Example: 76.6394"
+                    required
+                >
+
+
+                <button type="submit">
+                    Get Weather
+                </button>
+
+            </form>
+
+
+            {% else %}
+
+            <div class="weather-container">
+
+                <p>
+                    📍 Latitude:
+                    <strong>{{ latitude }}</strong>
+                </p>
+
+                <p>
+                    📍 Longitude:
+                    <strong>{{ longitude }}</strong>
+                </p>
+
+
+                <hr>
+
+
+                <h2>Current Weather</h2>
+
+
+                <div class="weather-info">
+
+                    <div class="weather-box">
+
+                        <h3>🌡️ Temperature</h3>
+
+                        <p>
+                            {{ temperature }} °C
+                        </p>
+
+                    </div>
+
+
+                    <div class="weather-box">
+
+                        <h3>💧 Humidity</h3>
+
+                        <p>
+                            {{ humidity }} %
+                        </p>
+
+                    </div>
+
+
+                    <div class="weather-box">
+
+                        <h3>🌧️ Rain</h3>
+
+                        <p>
+                            {{ rain }} mm
+                        </p>
+
+                    </div>
+
+
+                    <div class="weather-box">
+
+                        <h3>💦 Precipitation</h3>
+
+                        <p>
+                            {{ precipitation }} mm
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <hr>
+
+
+                <h2>5-Day Forecast</h2>
+
+
+                <div class="forecast">
+
+                    {% for i in range(5) %}
+
+                    <div class="forecast-box">
+
+                        <h3>
+                            {{ dates[i] }}
+                        </h3>
+
+                        <p>
+                            🌡️ {{ min_temperature[i] }} -
+                            {{ max_temperature[i] }} °C
+                        </p>
+
+                        <p>
+                            🌧️ Rain:
+                            {{ rainfall[i] }} mm
+                        </p>
+
+                        <p>
+                            ☔ Probability:
+                            {{ rain_probability[i] }} %
+                        </p>
+
+                    </div>
+
+                    {% endfor %}
+
+                </div>
+
+
+                <hr>
+
+
+                <h2>💧 Irrigation Advice</h2>
+
+
+                <div class="irrigation">
+
+                    {{ irrigation_advice }}
+
+                </div>
+
+            </div>
+
+            {% endif %}
+
+
+            {% if error %}
+
+            <p class="error">
+                {{ error }}
+            </p>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>
