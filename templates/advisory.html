@@ -67,7 +67,7 @@
                 </label>
 
 
-                <input type="text" id="crop_name" name="crop_name" placeholder="Example: Ragi" required>
+                <input type="text" id="crop_name" name="crop_name" value="{{ crop_name or '' }}" placeholder="Example: Ragi" required readonly>
 
 
                 <label for="crop_week">
@@ -77,7 +77,16 @@
                 </label>
 
 
-                <input type="number" id="crop_week" name="crop_week" min="1" placeholder="Example: 10" required>
+                <input
+                    type="number"
+                    id="crop_week"
+                    name="crop_week"
+                    value="{{ crop_week or '' }}"
+                    min="1"
+                    placeholder="Example: 10"
+                    required
+                    readonly
+                >
 
 
                 <label for="health_condition">

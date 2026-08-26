@@ -290,38 +290,77 @@
         </div>
 
 
-        <!-- HARVEST -->
+        <!-- HARVEST & YIELD -->
 
         <div class="card">
 
-            <h2>🌾 Harvest</h2>
+            <h2>🌾 Harvest & Yield</h2>
 
             <div class="big">
-
-                {{ harvest_status }}
-
+            {{ harvest_status }}
             </div>
 
-            {% if harvest_week %}
+        {% if harvest_week %}
 
-                <p>
-                    Expected harvest:
-                    Week {{ harvest_week }}
-                </p>
+            <p>
+            Expected harvest:
+            Week {{ harvest_week }}
+            </p>
 
-            {% endif %}
+        {% endif %}
 
-            {% if remaining_weeks is not none %}
+        {% if remaining_weeks is not none %}
 
-                <p>
-                    Approximately
-                    <strong>
-                        {{ remaining_weeks }}
-                    </strong>
-                    weeks remaining.
-                </p>
+            <p>
+                Approximately
+                <strong>
+                {{ remaining_weeks }}
+                </strong>
+                weeks remaining.
+            </p>
 
-            {% endif %}
+        {% endif %}
+
+        {% if estimated_yield_per_hectare is not none %}
+
+            <hr>
+
+            <p>
+                <strong>Estimated yield:</strong>
+                {{ estimated_yield_per_hectare }}
+                tonnes/hectare
+            </p>
+
+        {% endif %}
+
+        {% if total_yield_tonnes is not none %}
+
+            <p>
+                <strong>Total estimated yield:</strong>
+                {{ total_yield_tonnes }}
+                tonnes
+            </p>
+
+        {% endif %}
+
+        {% if total_yield_kg is not none %}
+
+            <p>
+                <strong>Estimated production:</strong>
+                {{ total_yield_kg }}
+                kg
+            </p>
+
+        {% endif %}
+
+        {% if yield_confidence is not none %}
+
+            <p>
+                <strong>Prediction confidence:</strong>
+                {{ yield_confidence }}%
+            </p>
+
+        {% endif %}
 
         </div>
 
@@ -354,6 +393,70 @@
             {% endif %}
 
         </div>
+
+    </div>
+
+    <!-- FARMER ADVISORY -->
+
+    <div class="card">
+
+        <h2>🧑‍🌾 Farmer Advisory</h2>
+
+    {% if harvest_advice %}
+
+            <p>
+            <strong>🌾 Harvest:</strong>
+            {{ harvest_advice }}
+            </p>
+
+    {% endif %}
+
+    {% if irrigation_advice_module6 %}
+
+            <p>
+            <strong>💧 Irrigation:</strong>
+            {{ irrigation_advice_module6 }}
+            </p>
+
+    {% endif %}
+
+    {% if health_advice %}
+
+            <p>
+            <strong>🌱 Crop Health:</strong>
+            {{ health_advice }}
+            </p>
+
+    {% endif %}
+
+    {% if general_advice %}
+
+            <p>
+            <strong>📋 General Recommendations:</strong>
+            </p>
+
+            <ul>
+
+            {% for advice in general_advice %}
+
+                <li>{{ advice }}</li>
+
+            {% endfor %}
+
+            </ul>
+
+    {% endif %}
+
+    {% if not harvest_advice
+          and not irrigation_advice_module6
+          and not health_advice %}
+
+            <p>
+            Complete Module 6 to receive
+            farmer-specific advice.
+            </p>
+
+    {% endif %}
 
     </div>
 

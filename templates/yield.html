@@ -80,11 +80,13 @@
 
 
         <input
-            type="text"
-            id="crop_name"
-            name="crop_name"
-            placeholder="Example: Ragi"
-            required
+        type="text"
+        id="crop_name"
+        name="crop_name"
+        value="{{ crop_name or '' }}"
+        placeholder="Example: Ragi"
+        required
+        readonly
         >
 
 
@@ -98,13 +100,15 @@
 
 
         <input
-            type="number"
-            id="farm_area"
-            name="farm_area"
-            step="0.01"
-            min="0.01"
-            placeholder="Example: 2"
-            required
+        type="number"
+        id="farm_area"
+        name="farm_area"
+        value="{{ farm_area or '' }}"
+        step="0.01"
+        min="0.01"
+        placeholder="Example: 2"
+        required
+        readonly
         >
 
 
@@ -118,12 +122,14 @@
 
 
         <input
-            type="number"
-            id="crop_week"
-            name="crop_week"
-            min="1"
-            placeholder="Example: 10"
-            required
+        type="number"
+        id="crop_week"
+        name="crop_week"
+        value="{{ crop_week or '' }}"
+        min="1"
+        placeholder="Example: 10"
+        required
+        readonly
         >
 
 
@@ -137,13 +143,15 @@
 
 
         <input
-            type="number"
-            id="plant_height"
-            name="plant_height"
-            step="0.1"
-            min="0"
-            placeholder="Example: 85"
-            required
+        type="number"
+        id="plant_height"
+        name="plant_height"
+        value="{{ plant_height or '' }}"
+        step="0.1"
+        min="0"
+        placeholder="Example: 85"
+        required
+        readonly
         >
 
 
@@ -156,16 +164,17 @@
         </label>
 
 
-        <input
-            type="number"
-            id="expected_height"
-            name="expected_height"
-            step="0.1"
-            min="1"
-            placeholder="Example: 100"
-            required
+       <input
+        type="number"
+        id="expected_height"
+        name="expected_height"
+        value="{{ expected_height or '' }}"
+        step="0.1"
+        min="1"
+        placeholder="Example: 100"
+        required
+        readonly
         >
-
 
         <!-- HEALTH -->
 
@@ -180,43 +189,50 @@
             id="health_condition"
             name="health_condition"
             required
+            {% if health_condition %}disabled{% endif %}
         >
 
             <option value="">
-
                 Select crop health
-
             </option>
 
-
-            <option value="healthy">
-
+            <option
+            value="healthy"
+            {% if health_condition == "healthy" %}selected{% endif %}
+            >
                 🟢 Healthy
-
             </option>
 
-
-            <option value="slightly_unhealthy">
-
+            <option
+                value="slightly_unhealthy"
+                {% if health_condition == "slightly_unhealthy" %}selected{% endif %}
+            >
                 🟡 Slightly Unhealthy
-
             </option>
 
-
-            <option value="moderate">
-
+            <option
+            value="moderate"
+            {% if health_condition == "moderate" %}selected{% endif %}
+            >
                 🟠 Moderate
-
             </option>
 
-
-            <option value="poor">
-
-                🔴 Poor
-
+            <option
+                value="poor"
+                {% if health_condition == "poor" %}selected{% endif %}
+            >
+            🔴 Poor
             </option>
 
         </select>
+
+        {% if health_condition %}
+        <input
+        type="hidden"
+        name="health_condition"
+        value="{{ health_condition }}"
+        >
+        {% endif %}
 
 
         <button type="submit">
