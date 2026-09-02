@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request,redirect,url_for
 import requests
 import os
 import sqlite3
@@ -110,7 +110,6 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 monitoring_records = []
 
-
 # =========================================================
 # MODULE 1 - FARM LOCATION
 # =========================================================
@@ -122,131 +121,192 @@ def location():
 
     if request.method == "POST":
 
-        farm_location = request.form.get("location")
+        farm_location = request.form.get(
+            "location"
+        )
 
         if farm_location:
             farm_location = farm_location.strip()
 
-        if farm_location:
+        if not farm_location:
+
+            return render_template(
+                "location.html",
+                error="Please enter your farm location."
+            )
+
+        # =================================================
+        # GEOCODING FARM LOCATION
+        # =================================================
+
+        try:
+
+            geocoding_url = (
+                "https://geocoding-api.open-meteo.com/v1/search"
+            )
+
+            params = {
+                "name": farm_location,
+                "count": 1,
+                "language": "en",
+                "format": "json"
+            }
+
+            response = requests.get(
+                geocoding_url,
+                params=params,
+                timeout=10
+            )
+
+            response.raise_for_status()
+
+            geocoding_data = response.json()
+
+            results = geocoding_data.get(
+                "results",
+                []
+            )
+
+            if not results:
+
+                return render_template(
+                    "location.html",
+                    error=(
+                        "Location not found. "
+                        "Please enter a valid city, "
+                        "district or place name."
+                    )
+                )
+
+            location_result = results[0]
+
+            latitude = location_result.get(
+                "latitude"
+            )
+
+            longitude = location_result.get(
+                "longitude"
+            )
+
+            location_name = location_result.get(
+                "name",
+                farm_location
+            )
+
+            country = location_result.get(
+                "country",
+                ""
+            )
+
+            # =================================================
+            # SAVE FARM LOCATION
+            # =================================================
 
             farm_data["location"] = {
 
-            "location_name": farm_location,
+                "location_name":
+                    farm_location,
 
-            "latitude": None,
+                "resolved_name":
+                    location_name,
 
-            "longitude": None
-        }
+                "country":
+                    country,
+
+                "latitude":
+                    latitude,
+
+                "longitude":
+                    longitude
+            }
+
+            return redirect(url_for("dashboard"))
+
+        except requests.RequestException:
+
             return render_template(
 
-            "location.html",
+                "location.html",
 
-            location=farm_location,
-
-            submitted=True
-
-        )
-
-        return render_template(
-            "location.html",
-            error="Please enter your farm location."
-        )
+                error=(
+                    "Unable to find the location "
+                    "right now. Please check your "
+                    "internet connection and try again."
+                )
+            )
 
     return render_template(
-        "location.html",
-        location=farm_location
-    )
 
+        "location.html",
+
+        location=farm_location
+
+    )
 
 
 # =========================================================
 # MODULE 2 - WEATHER
 # =========================================================
 
-@app.route("/weather", methods=["GET", "POST"])
+@app.route("/weather", methods=["GET"])
 def weather():
 
     # =====================================================
-    # GET REQUEST
+    # GET SAVED FARM LOCATION
     # =====================================================
 
-    if request.method == "GET":
+    location_data = farm_data.get(
+        "location",
+        {}
+    )
 
-        return render_template(
-            "weather.html"
-        )
+    farm_location = location_data.get(
+        "location_name"
+    )
+
+    latitude = location_data.get(
+        "latitude"
+    )
+
+    longitude = location_data.get(
+        "longitude"
+    )
 
     # =====================================================
-    # GET FARM LOCATION COORDINATES
+    # CHECK WHETHER FARM LOCATION EXISTS
     # =====================================================
 
-    latitude_input = request.form.get("latitude")
-    longitude_input = request.form.get("longitude")
-
-    # =====================================================
-    # VALIDATE INPUT
-    # =====================================================
-
-    if not latitude_input or not longitude_input:
-
-        return render_template(
-            "weather.html",
-            error="Please enter latitude and longitude."
-        )
-
-    try:
-
-        latitude = float(latitude_input)
-        longitude = float(longitude_input)
-
-        # =====================================================
-    # SAVE LOCATION FOR OTHER MODULES
-    # =====================================================
-
-
-        farm_data["location"] = {
-
-        "location_name":
-            farm_data["location"].get(
-                "location_name",
-                "Farm"
-            ),
-
-        "latitude": latitude,
-
-        "longitude": longitude
-    }
-
-    except (ValueError, TypeError):
+    if not farm_location:
 
         return render_template(
             "weather.html",
-            error="Please enter valid latitude and longitude."
+            error=(
+                "Please enter your farm location "
+                "first."
+            )
         )
 
     # =====================================================
-    # CHECK VALID COORDINATE RANGE
+    # CHECK WHETHER COORDINATES EXIST
     # =====================================================
 
-    if latitude < -90 or latitude > 90:
+    if latitude is None or longitude is None:
 
         return render_template(
             "weather.html",
-            error="Latitude must be between -90 and 90."
-        )
-
-    if longitude < -180 or longitude > 180:
-
-        return render_template(
-            "weather.html",
-            error="Longitude must be between -180 and 180."
+            error=(
+                "Farm coordinates are not available. "
+                "Please update your farm location."
+            )
         )
 
     # =====================================================
     # OPEN-METEO API
     # =====================================================
 
-    url = "https://api.open-meteo.com/v1/forecast"
+    url = (
+        "https://api.open-meteo.com/v1/forecast"
+    )
 
     parameters = {
 
@@ -291,11 +351,17 @@ def weather():
 
     except requests.RequestException as e:
 
-        print("Weather API Error:", e)
+        print(
+            "Weather API Error:",
+            e
+        )
 
         return render_template(
             "weather.html",
-            error="Unable to connect to weather service."
+            error=(
+                "Unable to connect to "
+                "weather service."
+            )
         )
 
     # =====================================================
@@ -404,49 +470,9 @@ def weather():
 
     # =====================================================
     # SAVE WEATHER DATA FOR OTHER MODULES
-    # =====================================================    
+    # =====================================================
 
     farm_data["weather"] = {
-
-    "latitude": latitude,
-
-    "longitude": longitude,
-
-    "temperature": temperature,
-
-    "humidity": humidity,
-
-    "precipitation": precipitation,
-
-    "rain": rain,
-
-    "dates": dates,
-
-    "max_temperature": max_temperature,
-
-    "min_temperature": min_temperature,
-
-    "rainfall": rainfall,
-
-    "rain_probability": rain_probability,
-
-    "tomorrow_rain_probability":
-        tomorrow_rain_probability,
-
-    "tomorrow_rainfall":
-        tomorrow_rainfall,
-
-    "irrigation_advice":
-        irrigation_advice
-    }    
-
-    # =====================================================
-    # SAVE WEATHER DATA FOR DASHBOARD
-    # =====================================================
-
-    weather_data.clear()
-
-    weather_data.update({
 
         "latitude": latitude,
 
@@ -478,6 +504,49 @@ def weather():
 
         "irrigation_advice":
             irrigation_advice
+    }
+
+    # =====================================================
+    # SAVE WEATHER DATA FOR DASHBOARD
+    # =====================================================
+
+    weather_data.clear()
+
+    weather_data.update({
+
+        "latitude": latitude,
+
+        "longitude": longitude,
+
+        "temperature": temperature,
+
+        "humidity": humidity,
+
+        "precipitation": precipitation,
+
+        "rain": rain,
+
+        "dates": dates,
+
+        "max_temperature":
+            max_temperature,
+
+        "min_temperature":
+            min_temperature,
+
+        "rainfall": rainfall,
+
+        "rain_probability":
+            rain_probability,
+
+        "tomorrow_rain_probability":
+            tomorrow_rain_probability,
+
+        "tomorrow_rainfall":
+            tomorrow_rainfall,
+
+        "irrigation_advice":
+            irrigation_advice
     })
 
     # =====================================================
@@ -487,6 +556,8 @@ def weather():
     return render_template(
 
         "weather.html",
+
+        farm_location=farm_location,
 
         latitude=latitude,
 
@@ -521,8 +592,6 @@ def weather():
 
         submitted=True
     )
-
-
 
 
 # =========================================================
@@ -1229,22 +1298,26 @@ def monitor():
             )
 
 
+
     return render_template(
 
-    "monitoring.html",
+        "monitoring.html",
 
-    records=monitoring_records,
+        records=monitoring_records,
 
-    recommendations=
-        farm_data["crop"].get(
-            "recommendations",
-            []
-        ),
+        recommendations=
+            farm_data["crop"].get(
+                "recommendations",[]
+            ),
 
-    success=True,
+        success=True,
 
-    growth_message=growth_message
-)
+        growth_message=growth_message,
+
+        latest_monitoring=record
+    )
+
+
 
 
 
@@ -1301,13 +1374,28 @@ def yield_prediction():
             []
             )
 
+
         crop_name = None
 
-        if recommendations:
+        # =====================================================
+        # PRIORITY:
+        # 1. Latest monitored crop
+        # 2. Top recommended crop
+        # =====================================================
+
+        if latest_monitoring:
+
+            crop_name = latest_monitoring.get(
+            "crop_name"
+            )
+
+        if not crop_name and recommendations:
 
             crop_name = recommendations[0].get(
             "name"
             )
+
+
 
         crop_week = None
 
@@ -1372,19 +1460,34 @@ def yield_prediction():
     latest_monitoring = farm_data.get(
         "latest_monitoring"
     )
+    
     crop_name = request.form.get(
-    "crop_name"
-    )
+        "crop_name"
+        )
 
     # =====================================================
-    # CROP
+    # PRIORITY:
+    # 1. Latest monitored crop
+    # 2. Recommended crop
     # =====================================================
+
+    if latest_monitoring:
+
+        monitored_crop = latest_monitoring.get(
+            "crop_name"
+            )
+
+        if monitored_crop:
+
+            crop_name = monitored_crop
 
     if not crop_name:
 
         crop_name = crop_data.get(
-        "selected_crop"
+            "selected_crop"
         )
+
+
 
 
     farm_area_input = request.form.get(
@@ -2048,284 +2151,288 @@ def yield_prediction():
 # MODULE 6 - FARMER ADVISORY & HARVEST PLANNING
 # =========================================================
 
-
 @app.route("/advisory", methods=["GET", "POST"])
 def advisory():
 
-    # -----------------------------------------------------
-    # GET REQUEST
-    # -----------------------------------------------------
+    # =====================================================
+    # GET DATA FROM PREVIOUS MODULES
+    # =====================================================
 
-    if request.method == "GET":
-
-        crop_data = farm_data.get(
+    crop_data = farm_data.get(
         "crop",
         {}
-        )
+    )
 
-        latest_monitoring = farm_data.get(
+    latest_monitoring = farm_data.get(
         "latest_monitoring"
-        )
+    )
 
-        yield_data = farm_data.get(
+    yield_data = farm_data.get(
         "yield",
         {}
-        )
+    )
 
-        weather_data = farm_data.get(
+    weather_data = farm_data.get(
         "weather",
         {}
+    )
+
+    # =====================================================
+    # GET CROP FROM LATEST MONITORING
+    # =====================================================
+
+    crop_name = None
+
+    crop_week = None
+
+    health_condition = None
+
+    plant_height = None
+
+    plant_problem = None
+
+    if latest_monitoring:
+
+        crop_name = latest_monitoring.get(
+            "crop_name"
         )
 
-        crop_name = None
+        crop_week = latest_monitoring.get(
+            "week"
+        )
+
+        health_condition = latest_monitoring.get(
+            "leaf_condition"
+        )
+
+        plant_height = latest_monitoring.get(
+            "plant_height"
+        )
+
+        plant_problem = latest_monitoring.get(
+            "plant_problem"
+        )
+
+    # =====================================================
+    # FALLBACK TO CROP RECOMMENDATION
+    # =====================================================
+    # Used only if no monitoring record exists.
+
+    if not crop_name:
 
         recommendations = crop_data.get(
-        "recommendations",
-        []
+            "recommendations",
+            []
         )
 
         if recommendations:
 
             crop_name = recommendations[0].get(
-            "name"
+                "name"
             )
-
-        crop_week = None
-        health_condition = None
-        plant_height = None
-
-        if latest_monitoring:
-
-            crop_week = latest_monitoring.get(
-            "week"
-            )
-
-            health_condition = latest_monitoring.get(
-            "leaf_condition"
-            )
-
-            plant_height = latest_monitoring.get(
-            "plant_height"
-            )
-
-        return render_template(
-
-        "advisory.html",
-
-        crop_name=crop_name,
-
-        farm_area=crop_data.get(
-            "farm_area"
-        ),
-
-        soil_type=crop_data.get(
-            "soil_type"
-        ),
-
-        ph=crop_data.get(
-            "ph"
-        ),
-
-        irrigation=crop_data.get(
-            "irrigation"
-        ),
-
-        season=crop_data.get(
-            "season"
-        ),
-
-        crop_week=crop_week,
-
-        plant_height=plant_height,
-
-        health_condition=health_condition,
-
-        estimated_yield_per_hectare=
-            yield_data.get(
-                "estimated_yield_per_hectare"
-            ),
-
-        total_yield_tonnes=
-            yield_data.get(
-                "total_yield_tonnes"
-            ),
-
-        harvest_week=
-            yield_data.get(
-                "harvest_week"
-            ),
-
-        remaining_weeks=
-            yield_data.get(
-                "remaining_weeks"
-            ),
-
-        weather_data=weather_data
-    )
-
-
-    # -----------------------------------------------------
-    # GET FARM DATA FROM PREVIOUS MODULES
-    # -----------------------------------------------------
-
-    crop_data = farm_data.get(
-        "crop",{})
-
-    latest_monitoring = farm_data.get(
-    "latest_monitoring")
-
-    yield_data = farm_data.get(
-        "yield",{})
-
-
-    # -----------------------------------------------------
-    # CROP
-    # -----------------------------------------------------
-
-    crop_name = request.form.get(
-        "crop_name")
-
-    if not crop_name:
-
-        crop_name = crop_data.get(
-            "selected_crop")
-
-
-    # -----------------------------------------------------
-    # CROP WEEK
-    # -----------------------------------------------------
-
-    crop_week_input = request.form.get(
-        "crop_week")
-
-    if not crop_week_input and latest_monitoring:
-
-        crop_week_input = latest_monitoring.get(
-            "week")
-
-
-    # -----------------------------------------------------
-    # HEALTH CONDITION
-    # -----------------------------------------------------
-
-    health_condition = request.form.get(
-        "health_condition")
-
-    if not health_condition and latest_monitoring:
-
-        health_condition = latest_monitoring.get(
-            "leaf_condition")
-
-
-    # -----------------------------------------------------
-    # RAIN FORECAST
-    # -----------------------------------------------------
-
-    rain_forecast_input = request.form.get(
-        "rain_forecast")
 
     # =====================================================
-    # GET WEATHER DATA FROM MODULE 2
+    # FALLBACK FOR CROP WEEK
     # =====================================================
 
-    weather_data = farm_data.get(
-        "weather",{})
+    if crop_week is None:
 
-    if not rain_forecast_input and weather_data:
-
-        tomorrow_probability = weather_data.get(
-            "tomorrow_rain_probability"
-            )
-
-        tomorrow_rainfall = weather_data.get(
-            "tomorrow_rainfall"
+        crop_week = request.form.get(
+            "crop_week"
         )
 
-        if tomorrow_probability is not None:
-
-            if tomorrow_probability >= 70:
-
-                rain_forecast_input = "heavy"
-
-            elif tomorrow_probability >= 40:
-
-                rain_forecast_input = "moderate"
-            elif tomorrow_probability >= 20:
-            
-                rain_forecast_input = "light"    
-
-            else:
-
-                rain_forecast_input = "none"
-
-    # If weather data is not available
-    if not rain_forecast_input:
-
-        return render_template(
-            "advisory.html",
-            error="Weather information is not available. "
-              "Please complete Module 2 first."
-                )
-
-    # -----------------------------------------------------
-    # VALIDATION
-    # -----------------------------------------------------
-
-    if not crop_name:
-
-        return render_template(
-            "advisory.html",
-            error="Please enter the crop name."
-        )
-
-
-    if not crop_week_input:
-
-        return render_template(
-            "advisory.html",
-            error="Please enter the crop week."
-        )
-
+    # =====================================================
+    # FALLBACK FOR HEALTH
+    # =====================================================
 
     if not health_condition:
 
-        return render_template(
-            "advisory.html",
-            error="Please select the crop health."
+        health_condition = request.form.get(
+            "health_condition"
         )
 
+    # =====================================================
+    # CONVERT MONITORING HEALTH TO ADVISORY HEALTH
+    # =====================================================
+
+    if health_condition == "healthy":
+
+        advisory_health = "healthy"
+
+    elif health_condition == "slightly_yellow":
+
+        advisory_health = "slightly_unhealthy"
+
+    elif health_condition == "yellow":
+
+        advisory_health = "moderate"
+
+    elif health_condition == "dry":
+
+        advisory_health = "poor"
+
+    elif health_condition == "spots":
+
+        advisory_health = "moderate"
+
+    else:
+
+        advisory_health = health_condition
+
+    # =====================================================
+    # GET RAINFALL FROM WEATHER MODULE
+    # =====================================================
+
+    tomorrow_probability = weather_data.get(
+        "tomorrow_rain_probability"
+    )
+
+    tomorrow_rainfall = weather_data.get(
+        "tomorrow_rainfall"
+    )
+
+    rain_forecast_input = None
+
+    if tomorrow_probability is not None:
+
+        if tomorrow_probability >= 70:
+
+            rain_forecast_input = "heavy"
+
+        elif tomorrow_probability >= 40:
+
+            rain_forecast_input = "moderate"
+
+        elif tomorrow_probability >= 20:
+
+            rain_forecast_input = "light"
+
+        else:
+
+            rain_forecast_input = "none"
+
+    # =====================================================
+    # IF NO WEATHER DATA
+    # =====================================================
 
     if not rain_forecast_input:
 
         return render_template(
+
             "advisory.html",
-            error="Please select the rainfall condition."
+
+            error=(
+                "Weather information is not available. "
+                "Please complete Module 2 first."
+            ),
+
+            crop_name=crop_name,
+
+            crop_week=crop_week,
+
+            health_condition=health_condition,
+
+            farm_area=crop_data.get(
+                "farm_area"
+            ),
+
+            soil_type=crop_data.get(
+                "soil_type"
+            ),
+
+            ph=crop_data.get(
+                "ph"
+            ),
+
+            irrigation=crop_data.get(
+                "irrigation"
+            ),
+
+            season=crop_data.get(
+                "season"
+            )
         )
 
+    # =====================================================
+    # VALIDATE CROP
+    # =====================================================
 
-    # -----------------------------------------------------
-    # CONVERT WEEK
-    # -----------------------------------------------------
+    if not crop_name:
+
+        return render_template(
+
+            "advisory.html",
+
+            error=(
+                "No crop information is available. "
+                "Please complete crop monitoring first."
+            )
+        )
+
+    # =====================================================
+    # VALIDATE CROP WEEK
+    # =====================================================
+
+    if crop_week is None:
+
+        return render_template(
+
+            "advisory.html",
+
+            error=(
+                "No crop week is available. "
+                "Please complete crop monitoring first."
+            ),
+
+            crop_name=crop_name
+        )
+
+    # =====================================================
+    # CONVERT CROP WEEK
+    # =====================================================
 
     try:
 
         crop_week = int(
-            crop_week_input
+            crop_week
         )
 
-    except ValueError:
+    except (ValueError, TypeError):
 
         return render_template(
+
             "advisory.html",
-            error="Crop week must be a number."
+
+            error="Crop week must be a number.",
+
+            crop_name=crop_name
         )
 
+    # =====================================================
+    # VALIDATE HEALTH
+    # =====================================================
+
+    if not advisory_health:
+
+        return render_template(
+
+            "advisory.html",
+
+            error=(
+                "No crop health information is available. "
+                "Please complete crop monitoring first."
+            ),
+
+            crop_name=crop_name,
+
+            crop_week=crop_week
+        )
 
     # =====================================================
     # CROP HARVEST DATABASE
     # =====================================================
 
-    crop_data = {
+    harvest_data = {
 
         "rice": {
             "harvest_week": 18
@@ -2394,16 +2501,13 @@ def advisory():
         "rabi sorghum (jowar)": {
             "harvest_week": 18
         }
-
     }
-
 
     crop_key = crop_name.lower().strip()
 
+    if crop_key in harvest_data:
 
-    if crop_key in crop_data:
-
-        harvest_week = crop_data[
+        harvest_week = harvest_data[
             crop_key
         ]["harvest_week"]
 
@@ -2411,57 +2515,44 @@ def advisory():
 
         harvest_week = 16
 
-
     # =====================================================
     # HARVEST ADVISORY
     # =====================================================
 
     remaining_weeks = (
-
         harvest_week -
         crop_week
-
     )
-
 
     if remaining_weeks <= 0:
 
         harvest_advice = (
-
             "🌾 The crop may be ready for "
             "harvesting. Check the crop carefully "
             "before harvesting."
-
         )
 
         harvest_status = "Ready / Near Harvest"
 
-
     elif remaining_weeks <= 2:
 
         harvest_advice = (
-
             "🌾 Harvest time is approaching. "
             "Start preparing labour, storage "
             "and transportation arrangements."
-
         )
 
         harvest_status = "Harvest Approaching"
 
-
     else:
 
         harvest_advice = (
-
             f"🌱 The crop may need approximately "
             f"{remaining_weeks} more weeks before "
             f"the expected harvest period."
-
         )
 
         harvest_status = "Growing"
-
 
     # =====================================================
     # IRRIGATION ADVISORY
@@ -2470,110 +2561,86 @@ def advisory():
     if rain_forecast_input == "heavy":
 
         irrigation_advice = (
-
             "🌧️ Heavy rain is expected. "
             "Avoid unnecessary irrigation and "
             "ensure proper drainage."
-
         )
 
         irrigation_status = "Avoid Irrigation"
 
-
     elif rain_forecast_input == "moderate":
 
         irrigation_advice = (
-
             "🌦️ Moderate rainfall is expected. "
             "Reduce irrigation and monitor the "
             "soil moisture."
-
         )
 
         irrigation_status = "Reduce Irrigation"
 
-
     elif rain_forecast_input == "light":
 
         irrigation_advice = (
-
             "🌦️ Light rainfall is expected. "
             "Monitor soil moisture and irrigate "
             "only if the soil becomes dry."
-
         )
 
         irrigation_status = "Monitor Soil"
 
-
     else:
 
         irrigation_advice = (
-
             "☀️ Little or no rainfall is expected. "
             "Check soil moisture and provide "
             "irrigation when necessary."
-
         )
 
         irrigation_status = "Irrigation May Be Needed"
-
 
     # =====================================================
     # HEALTH ADVISORY
     # =====================================================
 
-    if health_condition == "healthy":
+    if advisory_health == "healthy":
 
         health_advice = (
-
             "🌱 The crop appears healthy. "
             "Continue regular monitoring."
-
         )
 
         health_status = "Healthy"
 
-
-    elif health_condition == "slightly_unhealthy":
+    elif advisory_health == "slightly_unhealthy":
 
         health_advice = (
-
             "🟡 Some stress may be present. "
             "Monitor leaves, soil moisture and "
             "possible pest activity."
-
         )
 
         health_status = "Needs Monitoring"
 
-
-    elif health_condition == "moderate":
+    elif advisory_health == "moderate":
 
         health_advice = (
-
             "🟠 Moderate crop stress detected. "
             "Inspect the plants for pests, disease "
             "and nutrient deficiency."
-
         )
 
         health_status = "Attention Required"
 
-
     else:
 
         health_advice = (
-
             "🔴 The crop appears stressed. "
             "Inspect the affected plants and "
             "consider contacting an agricultural "
             "expert if the problem continues."
-
         )
 
         health_status = "High Attention"
-
 
     # =====================================================
     # GENERAL FARMER ADVICE
@@ -2597,61 +2664,98 @@ def advisory():
 
     ]
 
-
     # =====================================================
-    # SAVE ADVISORY DATA TO SHARED FARM DATA
+    # SAVE ADVISORY DATA
     # =====================================================
 
     farm_data["advisory"] = {
 
-    "crop_name": crop_name,
+        "crop_name": crop_name,
 
-    "crop_week": crop_week,
+        "crop_week": crop_week,
 
-    "harvest_status": harvest_status,
+        "harvest_status": harvest_status,
 
-    "harvest_advice": harvest_advice,
+        "harvest_advice": harvest_advice,
 
-    "irrigation_status": irrigation_status,
+        "irrigation_status": irrigation_status,
 
-    "irrigation_advice": irrigation_advice,
+        "irrigation_advice": irrigation_advice,
 
-    "health_status": health_status,
+        "health_status": health_status,
 
-    "health_advice": health_advice,
+        "health_advice": health_advice,
 
-    "general_advice": general_advice
+        "general_advice": general_advice
     }
 
-
     # =====================================================
-    # RETURN ADVISORY RESULT
+    # RETURN ADVISORY PAGE
     # =====================================================
 
     return render_template(
 
-    "advisory.html",
+        "advisory.html",
 
-    success=True,
+        success=True,
 
-    crop_name=crop_name,
+        crop_name=crop_name,
 
-    crop_week=crop_week,
+        crop_week=crop_week,
 
-    harvest_status=harvest_status,
+        plant_height=plant_height,
 
-    harvest_advice=harvest_advice,
+        health_condition=health_condition,
 
-    irrigation_status=irrigation_status,
+        harvest_status=harvest_status,
 
-    irrigation_advice=irrigation_advice,
+        harvest_advice=harvest_advice,
 
-    health_status=health_status,
+        irrigation_status=irrigation_status,
 
-    health_advice=health_advice,
+        irrigation_advice=irrigation_advice,
 
-    general_advice=general_advice
+        health_status=health_status,
 
+        health_advice=health_advice,
+
+        general_advice=general_advice,
+
+        farm_area=crop_data.get(
+            "farm_area"
+        ),
+
+        soil_type=crop_data.get(
+            "soil_type"
+        ),
+
+        ph=crop_data.get(
+            "ph"
+        ),
+
+        irrigation=crop_data.get(
+            "irrigation"
+        ),
+
+        season=crop_data.get(
+            "season"
+        ),
+
+        estimated_yield_per_hectare=
+            yield_data.get(
+                "estimated_yield_per_hectare"
+            ),
+
+        total_yield_tonnes=
+            yield_data.get(
+                "total_yield_tonnes"
+            ),
+
+        harvest_week=harvest_week,
+
+        remaining_weeks=remaining_weeks,
+
+        weather_data=weather_data
     )
 # =========================================================
 # MODULE 7 - INTEGRATED FARM DASHBOARD
@@ -2668,6 +2772,14 @@ def dashboard():
         "crop",{}
     )
 
+    location_data = farm_data.get(
+        "location",{}
+    )
+
+    farm_location = location_data.get(
+        "location_name"
+    )
+
     latest_monitoring = farm_data.get(
         "latest_monitoring")
 
@@ -2678,6 +2790,33 @@ def dashboard():
     advisory_data = farm_data.get(
         "advisory",{}
         )
+
+    
+    weather_data_saved = farm_data.get(
+        "weather",{}
+        )
+
+    temperature = weather_data_saved.get(
+        "temperature"
+        )
+
+    humidity = weather_data_saved.get(
+        "humidity"
+        )
+
+    rain_probability = weather_data_saved.get(
+        "tomorrow_rain_probability"
+        )
+
+    tomorrow_rainfall = weather_data_saved.get(
+        "tomorrow_rainfall"
+        )
+
+    irrigation_advice = weather_data_saved.get(
+        "irrigation_advice"
+        )
+
+
 
     # =====================================================
     # ADVISORY DATA FROM MODULE 6
@@ -2705,9 +2844,10 @@ def dashboard():
     # BASIC DEFAULT VALUES
     # =====================================================
 
+
     crop_name = crop_data.get(
         "selected_crop"
-    )
+        )
 
     crop_week = None
 
@@ -2727,9 +2867,20 @@ def dashboard():
 
     if latest_monitoring:
 
+    # Use the crop actually being monitored
+    # instead of the recommended crop.
+
+        monitored_crop = latest_monitoring.get(
+            "crop_name"
+        )
+
+        if monitored_crop:
+
+            crop_name = monitored_crop
+
         crop_week = latest_monitoring.get(
-            "week"
-            )
+                "week"
+                )
 
         plant_height = latest_monitoring.get(
             "plant_height"
@@ -2747,13 +2898,7 @@ def dashboard():
             "disease_analysis"
             )
 
-        # Use monitoring crop only if
-        # Module 3 has not provided one.
-        if not crop_name:
 
-            crop_name = latest_monitoring.get(
-                "crop_name"
-                )
 
     # =====================================================
     # CROP HEALTH STATUS
