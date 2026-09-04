@@ -46,9 +46,7 @@
 
         .cards {
             display: grid;
-            grid-template-columns:
-                repeat(auto-fit, minmax(250px, 1fr));
-
+            grid-template-columns: repeat(12, 1fr);
             gap: 20px;
         }
 
@@ -56,8 +54,40 @@
             background: white;
             padding: 20px;
             border-radius: 12px;
-            box-shadow:
-                0 2px 8px rgba(0,0,0,0.08);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        /* First 4 cards */
+        .card:nth-child(1),
+        .card:nth-child(2),
+        .card:nth-child(3),
+        .card:nth-child(4) {
+            grid-column: span 3;
+        }
+
+        /* Second row - 3 cards */
+        .card:nth-child(5),
+        .card:nth-child(6),
+        .card:nth-child(7) {
+            grid-column: span 3;
+        }
+
+        /* Center the second row */
+        .card:nth-child(5) {
+            grid-column: 2 / span 3;
+        }
+
+        .card:nth-child(6) {
+            grid-column: 5 / span 3;
+        }
+
+        .card:nth-child(7) {
+            grid-column: 8 / span 3;
+        }
+
+        /* Farmer Advisory */
+        .advisory {
+            margin-top: 20px;   
         }
 
         .card h2 {
@@ -99,6 +129,10 @@
 
         .button:hover {
             background: #1b5e20;
+        }
+
+        .advisory{
+            margin-top: 20px;
         }
 
     </style>
@@ -398,7 +432,7 @@
 
     <!-- FARMER ADVISORY -->
 
-    <div class="card">
+    <div class="card advisory">
 
         <h2>🧑‍🌾 Farmer Advisory</h2>
 
