@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request,redirect,url_for
+from numpy import record
 import requests
 import os
 import sqlite3
@@ -988,49 +989,44 @@ def crops():
 @app.route("/monitor", methods=["GET", "POST"])
 def monitor():
 
+    # =====================================================
+    # GET REQUEST
+    # =====================================================
+
     if request.method == "GET":
 
         crop_data = farm_data.get(
-        "crop",
-        {}
-    )
+            "crop",
+            {}
+        )
 
         recommendations = crop_data.get(
-        "recommendations",
-        []
-    )
+            "recommendations",
+            []
+        )
 
         return render_template(
-
-        "monitoring.html",
-
-        records=monitoring_records,
-
-        recommendations=recommendations
-
-    )
+            "monitoring.html",
+            records=monitoring_records,
+            recommendations=recommendations
+        )
 
 
-    # -----------------------------------------------------
-    # Get farmer input
-    # -----------------------------------------------------
+    # =====================================================
+    # GET FARMER INPUT
+    # =====================================================
 
     crop_name = request.form.get("crop_name")
-
     crop_week = request.form.get("crop_week")
-
     plant_height = request.form.get("plant_height")
-
     leaf_condition = request.form.get("leaf_condition")
-
     plant_problem = request.form.get("plant_problem")
-
     farmer_notes = request.form.get("farmer_notes")
 
 
-    # -----------------------------------------------------
-    # Validate required fields
-    # -----------------------------------------------------
+    # =====================================================
+    # VALIDATION
+    # =====================================================
 
     if not crop_name:
 
@@ -1068,15 +1064,15 @@ def monitor():
         )
 
 
-    # -----------------------------------------------------
-    # Convert values
-    # -----------------------------------------------------
+    # =====================================================
+    # CONVERT CROP WEEK
+    # =====================================================
 
     try:
 
         crop_week = int(crop_week)
 
-    except ValueError:
+    except (ValueError, TypeError):
 
         return render_template(
             "monitoring.html",
@@ -1085,11 +1081,15 @@ def monitor():
         )
 
 
+    # =====================================================
+    # CONVERT PLANT HEIGHT
+    # =====================================================
+
     try:
 
         plant_height = float(plant_height)
 
-    except ValueError:
+    except (ValueError, TypeError):
 
         return render_template(
             "monitoring.html",
@@ -1098,9 +1098,9 @@ def monitor():
         )
 
 
-    # -----------------------------------------------------
-    # Validate ranges
-    # -----------------------------------------------------
+    # =====================================================
+    # RANGE VALIDATION
+    # =====================================================
 
     if crop_week < 1:
 
@@ -1131,7 +1131,6 @@ def monitor():
 
     if image and image.filename:
 
-        # Keep the original filename for now
         image_filename = image.filename
 
         image_path = os.path.join(
@@ -1141,290 +1140,108 @@ def monitor():
 
         image.save(image_path)
 
-    # =====================================================
-    # SIMPLE CROP ANALYSIS
-    # =====================================================    
 
+    # =====================================================
+    # SIMPLE PLANT ANALYSIS
+    # =====================================================
 
     if leaf_condition == "healthy":
 
-        plant_identification = "Plant appears healthy"
-
-        disease_analysis = "No major visible problem reported"
-
-    elif leaf_condition in ["slightly_yellow", "yellow"]:
-
-        plant_identification = "Plant shows possible stress"
-
-        disease_analysis = (
-        "Possible nutrient deficiency or water stress. "
-        "Further observation recommended."
+        plant_identification = (
+            "Plant appears healthy"
         )
 
-    elif leaf_condition in ["dry", "spots"]:
+        disease_analysis = (
+            "No major visible problem reported"
+        )
 
-        plant_identification = "Plant shows visible stress"
+
+    elif leaf_condition in [
+        "slightly_yellow",
+        "yellow"
+    ]:
+
+        plant_identification = (
+            "Plant shows possible stress"
+        )
 
         disease_analysis = (
-        "Possible pest, disease or water-related stress. "
-        "Inspect the affected leaves."
+            "Possible nutrient deficiency or "
+            "water stress. Further observation recommended."
         )
+
+
+    elif leaf_condition in [
+        "dry",
+        "spots"
+    ]:
+
+        plant_identification = (
+            "Plant shows visible stress"
+        )
+
+        disease_analysis = (
+            "Possible pest, disease or water-related "
+            "stress. Inspect the affected leaves."
+        )
+
 
     else:
 
-        plant_identification = "Analysis unavailable"
+        plant_identification = (
+            "Analysis unavailable"
+        )
 
-        disease_analysis = "Continue monitoring the crop."
+        disease_analysis = (
+            "Continue monitoring the crop."
+        )
+
 
     # =====================================================
     # CREATE MONITORING RECORD
-    # =====================================================    
+    # =====================================================
 
     record = {
 
-    "crop_name": crop_name,
+        "crop_name": crop_name,
 
-    "week": crop_week,
+        "week": crop_week,
 
-    "plant_height": plant_height,
+        "plant_height": plant_height,
 
-    "leaf_condition": leaf_condition,
+        "leaf_condition": leaf_condition,
 
-    "plant_problem": plant_problem,
+        "plant_problem": plant_problem,
 
-    "notes": farmer_notes,
+        "notes": farmer_notes,
 
-    "image": image_filename,
+        "image": image_filename,
 
-    "plant_identification":
-        plant_identification,
+        "plant_identification":
+            plant_identification,
 
-    "disease_analysis":
-        disease_analysis,
+        "disease_analysis":
+            disease_analysis,
 
-    "date": datetime.now().strftime(
-        "%d-%m-%Y %H:%M"
-    )
-}
+        "date": datetime.now().strftime(
+            "%d-%m-%Y %H:%M"
+        )
+    }
 
-    # Add record to temporary storage
+
+    # =====================================================
+    # SAVE MONITORING RECORD TO MEMORY
+    # =====================================================
+
     monitoring_records.append(record)
 
-    # =====================================================
-    # SAVE MONITORING DATA TO SHARED FARM DATA
-    # =====================================================
-    
     farm_data["monitoring"].append(record)
 
-    # =====================================================
-    # LATEST MONITORING DATA
-    # =====================================================
-    
     farm_data["latest_monitoring"] = record
 
 
     # =====================================================
-    # HARVEST CHECK
-    # =====================================================
-
-    crop_yield_data = {
-
-    "rice": {
-        "yield": 3.5,
-        "harvest_week": 18
-    },
-
-    "wheat": {
-        "yield": 3.2,
-        "harvest_week": 16
-    },
-
-    "ragi": {
-        "yield": 1.8,
-        "harvest_week": 16
-    },
-
-    "maize": {
-        "yield": 3.5,
-        "harvest_week": 15
-    },
-
-    "groundnut": {
-        "yield": 1.8,
-        "harvest_week": 16
-    },
-
-    "cotton": {
-        "yield": 1.5,
-        "harvest_week": 24
-    },
-
-    "soybean": {
-        "yield": 1.4,
-        "harvest_week": 17
-    },
-
-    "chickpea": {
-        "yield": 1.8,
-        "harvest_week": 18
-    },
-
-    "chickpea (gram)": {
-        "yield": 1.8,
-        "harvest_week": 18
-    },
-
-    "mustard": {
-        "yield": 1.4,
-        "harvest_week": 16
-    },
-
-    "barley": {
-        "yield": 2.5,
-        "harvest_week": 16
-    },
-
-    "lentil": {
-        "yield": 1.2,
-        "harvest_week": 16
-    },
-
-    "peas": {
-        "yield": 2.0,
-        "harvest_week": 15
-    },
-
-    "pigeon pea (tur)": {
-        "yield": 1.2,
-        "harvest_week": 24
-    },
-
-    "pearl millet (bajra)": {
-        "yield": 1.5,
-        "harvest_week": 14
-    },
-
-    "safflower": {
-        "yield": 1.0,
-        "harvest_week": 18
-    },
-
-    "rabi sorghum (jowar)": {
-        "yield": 1.2,
-        "harvest_week": 18
-    }
-    }
-
-
-    crop_key = crop_name.lower().strip()
-
-    crop_info = crop_yield_data.get(crop_key)
-
-    harvest_completed = False
-    final_yield_tonnes = None
-    harvest_week = None
-
-    if crop_info:
-
-        harvest_week = crop_info["harvest_week"]
-
-        if int(crop_week) >= harvest_week:
-
-            harvest_completed = True
-
-            # Get the latest yield prediction
-            yield_data = farm_data.get("yield", {})
-
-            final_yield_tonnes = yield_data.get(
-                "total_yield_tonnes"
-            )
-
-            # If yield prediction is not available,
-            # calculate a simple fallback estimate.
-            if final_yield_tonnes is None:
-
-                farm_area = farm_data.get(
-                    "crop", {}).get("farm_area")
-
-                if farm_area:
-
-                    farm_area_hectare = (
-                        float(farm_area) * 0.404686
-                    )
-
-                    final_yield_tonnes = (
-                    crop_info["yield"]
-                    * farm_area_hectare
-                    )
-
-                    final_yield_tonnes = round(
-                        final_yield_tonnes,
-                        2
-                    )
-
-        # Save harvest record
-        if final_yield_tonnes is not None:
-
-            connection = get_db_connection()
-
-            connection.execute("""
-                INSERT INTO harvests
-                (
-                    crop_name,
-                    harvest_week,
-                    total_yield_tonnes,
-                    harvest_date
-                )
-                VALUES (?, ?, ?, ?)
-            """, (
-                crop_name,
-                harvest_week,
-                final_yield_tonnes,
-                datetime.now().strftime(
-                    "%d-%m-%Y %H:%M"
-                )
-            ))
-
-            # Delete weekly monitoring records
-            # for this crop
-            connection.execute("""
-                                        DELETE FROM monitoring
-                WHERE LOWER(crop_name) = LOWER(?)
-                """, (
-                crop_name,
-            ))
-
-            connection.commit()
-            connection.close()
-
-            # Remove from in-memory history
-            monitoring_records[:] = [
-                r for r in monitoring_records
-                if r.get("crop_name", "").lower()
-                != crop_name.lower()
-            ]
-
-            farm_data["monitoring"] = [
-                r for r in farm_data.get(
-                    "monitoring", []
-                )
-                if r.get("crop_name", "").lower()
-                != crop_name.lower()
-            ]
-
-            farm_data["harvest"] = {
-                "crop_name": crop_name,
-                "harvest_week": harvest_week,
-                "total_yield_tonnes":
-                    final_yield_tonnes,
-                "harvest_date":
-                    datetime.now().strftime(
-                        "%d-%m-%Y %H:%M"
-                    )
-            }
-
-    # =====================================================
-    # SAVE MONITORING RECORD TO DATABASE
+    # SAVE MONITORING RECORD TO SQLITE DATABASE
     # =====================================================
 
     connection = get_db_connection()
@@ -1442,7 +1259,7 @@ def monitor():
             date
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
+    """, (
 
         crop_name,
 
@@ -1465,779 +1282,9 @@ def monitor():
 
     connection.close()
 
-    # =====================================================
-    # HARVEST CHECK
-    # =====================================================
-
-    crop_yield_data = {
-
-    "rice": {
-        "yield": 3.5,
-        "harvest_week": 18
-    },
-
-    "wheat": {
-        "yield": 3.2,
-        "harvest_week": 16
-    },
-
-    "ragi": {
-        "yield": 1.8,
-        "harvest_week": 16
-    },
-
-    "maize": {
-        "yield": 3.5,
-        "harvest_week": 15
-    },
-
-    "groundnut": {
-        "yield": 1.8,
-        "harvest_week": 16
-    },
-
-    "cotton": {
-        "yield": 1.5,
-        "harvest_week": 24
-    },
-
-    "soybean": {
-        "yield": 1.4,
-        "harvest_week": 17
-    },
-
-    "soyabean": {
-        "yield": 1.4,
-        "harvest_week": 17
-    },
-
-    "chickpea": {
-        "yield": 1.8,
-        "harvest_week": 18
-    },
-
-    "chickpea (gram)": {
-        "yield": 1.8,
-        "harvest_week": 18
-    },
-
-    "mustard": {
-        "yield": 1.4,
-        "harvest_week": 16
-    },
-
-    "barley": {
-        "yield": 2.5,
-        "harvest_week": 16
-    },
-
-    "lentil": {
-        "yield": 1.2,
-        "harvest_week": 16
-    },
-
-    "peas": {
-        "yield": 2.0,
-        "harvest_week": 15
-    },
-
-    "pigeon pea (tur)": {
-        "yield": 1.2,
-        "harvest_week": 24
-    },
-
-    "pearl millet (bajra)": {
-        "yield": 1.5,
-        "harvest_week": 14
-    },
-
-    "safflower": {
-        "yield": 1.0,
-        "harvest_week": 18
-    },
-
-    "rabi sorghum (jowar)": {
-        "yield": 1.2,
-        "harvest_week": 18
-    }
-    }
-
-
-    crop_key = crop_name.lower().strip()
-
-    crop_info = crop_yield_data.get(crop_key)
-
-
-    if crop_info:
-
-        harvest_week = crop_info["harvest_week"]
-
-
-    # -------------------------------------------------
-    # CHECK IF FINAL WEEK HAS BEEN REACHED
-    # -------------------------------------------------
-
-        if crop_week >= harvest_week:
-
-        # -------------------------------------------------
-        # GET YIELD
-        # -------------------------------------------------
-
-            yield_data = farm_data.get(
-            "yield",
-            {}
-            )
-
-            final_yield_tonnes = yield_data.get(
-            "total_yield_tonnes"
-            )
-
-
-        # -------------------------------------------------
-        # FALLBACK YIELD
-        # -------------------------------------------------
-
-            if final_yield_tonnes is None:
-
-                crop_settings = farm_data.get(
-                "crop",
-                {}
-                )   
-
-                farm_area = crop_settings.get(
-                "farm_area"
-                )
-
-                if farm_area:
-
-                    farm_area_hectare = (
-                    float(farm_area)
-                    * 0.404686
-                    )
-
-                    final_yield_tonnes = (
-                    crop_info["yield"]
-                    * farm_area_hectare
-                    )
-
-                    final_yield_tonnes = round(
-                    final_yield_tonnes,
-                    2
-                    )
-
-
-        # -------------------------------------------------
-        # COMPLETE HARVEST
-        # -------------------------------------------------
-
-            if final_yield_tonnes is not None:
-
-                harvest_date = datetime.now().strftime(
-                "%d-%m-%Y %H:%M"
-                )
-
-
-                connection = get_db_connection()
-
-
-            # Save harvest record
-                connection.execute("""
-                    INSERT INTO harvests
-                (
-                    crop_name,
-                    harvest_week,
-                    total_yield_tonnes,
-                    harvest_date
-                )
-                VALUES (?, ?, ?, ?)
-            """, (
-                crop_name,
-                harvest_week,
-                final_yield_tonnes,
-                harvest_date
-                ))
-
-
-            # -------------------------------------------------
-            # DELETE WEEKLY MONITORING RECORDS
-            # -------------------------------------------------
-
-                if crop_key in [
-                "soybean",
-                "soyabean"
-                ]:
-
-                    connection.execute("""
-                    DELETE FROM monitoring
-                    WHERE LOWER(crop_name)
-                    IN ('soybean', 'soyabean')
-                    """)
-
-                else:
-
-                    connection.execute("""
-                    DELETE FROM monitoring
-                    WHERE LOWER(crop_name) = LOWER(?)
-                """, (
-                    crop_name,
-                    ))
-
-
-                connection.commit()
-
-                connection.close()
-
-
-            # -------------------------------------------------
-            # REMOVE FROM MEMORY
-            # -------------------------------------------------
-
-                if crop_key in [
-                "soybean",
-                "soyabean"
-            ]:
-
-                    monitoring_records[:] = [
-
-                    r for r in monitoring_records
-
-                    if r.get(
-                        "crop_name",
-                        ""
-                    ).lower()
-                    not in [
-                        "soybean",
-                        "soyabean"
-                    ]
-
-                    ]
-
-
-                    farm_data["monitoring"] = [
-
-                    r for r in farm_data.get(
-                        "monitoring",
-                        []
-                    )
-
-                        if r.get(
-                        "crop_name","").lower()not in["soybean","soyabean"]
-
-                    ]
-
-                else:
-
-                    monitoring_records[:] = [
-
-                    r for r in monitoring_records
-
-                        if r.get(
-                        "crop_name",
-                        ""
-                    ).lower()
-                    != crop_key
-
-                    ]
-
-
-                    farm_data["monitoring"] = [
-
-                    r for r in farm_data.get(
-                        "monitoring",
-                        []
-                    )
-
-                        if r.get(
-                        "crop_name",
-                        ""
-                    ).lower()
-                    != crop_key
-
-                    ]
-
-
-            # -------------------------------------------------
-            # SAVE HARVEST INFORMATION
-            # -------------------------------------------------
-
-            farm_data["harvest"] = {
-
-                "crop_name":
-                    crop_name,
-
-                "harvest_week":
-                    harvest_week,
-
-                "total_yield_tonnes":
-                    final_yield_tonnes,
-
-                "harvest_date":
-                    harvest_date
-
-            }
-
 
     # =====================================================
-    # SIMPLE WEEK-TO-WEEK COMPARISON
-    # =====================================================
-
-    growth_message = None
-
-
-    if len(monitoring_records) >= 2:
-
-        previous_record = monitoring_records[-2]
-
-        previous_height = previous_record[
-            "plant_height"
-        ]
-
-        current_height = plant_height
-
-        growth = current_height - previous_height
-
-
-        if growth > 0:
-
-            growth_message = (
-                f"Plant height increased by "
-                f"{growth:.1f} cm "
-                f"since the previous monitoring."
-            )
-
-        elif growth == 0:
-
-            growth_message = (
-                "Plant height has not changed "
-                "since the previous monitoring."
-            )
-
-        else:
-
-            growth_message = (
-                "Plant height is lower than the "
-                "previous record. Please verify "
-                "the measurements."
-            )
-
-
-
-    return render_template(
-
-        "monitoring.html",
-
-        records=monitoring_records,
-
-        recommendations=
-            farm_data["crop"].get(
-                "recommendations",[]
-            ),
-
-        success=True,
-
-        growth_message=growth_message,
-
-        latest_monitoring=record
-    )
-
-
-
-
-
-
-
-# =========================================================
-# MODULE 5 - YIELD PREDICTION
-# =========================================================
-
-
-@app.route("/yield", methods=["GET", "POST"])
-def yield_prediction():
-
-    # =====================================================
-    # EXPECTED HEIGHT DATABASE
-    # =====================================================
-
-    expected_height_data = {
-
-            "rice": 100,
-            "wheat": 90,
-            "ragi": 100,
-            "maize": 200,
-            "groundnut": 50,
-            "cotton": 150,
-            "soybean": 80,
-            "chickpea (gram)": 60,
-            "chickpea": 60,
-            "mustard": 120,
-            "barley": 90,
-            "lentil": 40,
-            "peas": 60,
-            "pigeon pea (tur)": 180,
-            "pearl millet (bajra)": 150,
-            "safflower": 100,
-            "rabi sorghum (jowar)": 150
-        }    
-
-    # -----------------------------------------------------
-    # GET REQUEST
-    # -----------------------------------------------------
-
-    if request.method == "GET":
-
-        crop_data = farm_data.get(
-            "crop",{})
-
-        latest_monitoring = farm_data.get(
-            "latest_monitoring"
-            )
-
-        recommendations = crop_data.get(
-            "recommendations",
-            []
-            )
-
-
-        crop_name = None
-
-        # =====================================================
-        # PRIORITY:
-        # 1. Latest monitored crop
-        # 2. Top recommended crop
-        # =====================================================
-
-        if latest_monitoring:
-
-            crop_name = latest_monitoring.get(
-            "crop_name"
-            )
-
-        if not crop_name and recommendations:
-
-            crop_name = recommendations[0].get(
-            "name"
-            )
-
-
-
-        crop_week = None
-
-        plant_height = None
-
-        health_condition = None
-
-        expected_height = None
-
-        if crop_name:
-
-            expected_height = expected_height_data.get(
-            crop_name.lower().strip()
-            )
-
-        if latest_monitoring:
-
-            crop_week = latest_monitoring.get(
-            "week"
-            )
-
-            plant_height = latest_monitoring.get(
-                "plant_height"
-            )
-
-            health_condition = latest_monitoring.get(
-            "leaf_condition"
-            )
-
-        return render_template(
-
-            "yield.html",
-
-            recommendations=recommendations,
-
-            latest_monitoring=latest_monitoring,
-
-            crop_name=crop_name,
-
-            farm_area=crop_data.get(
-            "farm_area"
-                ),
-
-            crop_week=crop_week,
-
-            plant_height=plant_height,
-
-            health_condition=health_condition,
-
-            expected_height=expected_height
-        )    
-        
-
-
-    # -----------------------------------------------------
-    # GET FARMER INPUT
-    # -----------------------------------------------------
-
-    crop_data = farm_data.get(
-    "crop",{})
-
-    latest_monitoring = farm_data.get(
-        "latest_monitoring"
-    )
-    
-    crop_name = request.form.get(
-        "crop_name"
-        )
-
-    # =====================================================
-    # PRIORITY:
-    # 1. Latest monitored crop
-    # 2. Recommended crop
-    # =====================================================
-
-    if latest_monitoring:
-
-        monitored_crop = latest_monitoring.get(
-            "crop_name"
-            )
-
-        if monitored_crop:
-
-            crop_name = monitored_crop
-
-    if not crop_name:
-
-        crop_name = crop_data.get(
-            "selected_crop"
-        )
-
-
-
-
-    farm_area_input = request.form.get(
-    "farm_area"
-    )
-
-    # =====================================================
-    # FARM AREA
-    # =====================================================
-
-    if not farm_area_input:
-
-        farm_area_input = crop_data.get(
-            "farm_area"
-         )
-
-
-# =====================================================
-# CROP WEEK
-# =====================================================
-
-
-    crop_week_input = request.form.get(
-    "crop_week"
-)
-
-    if not crop_week_input and latest_monitoring:
-
-        crop_week_input = latest_monitoring.get(
-        "week"
-    )  
-
-# =====================================================
-# PLANT HEIGHT
-# =====================================================
-
-    plant_height_input = request.form.get(
-    "plant_height"
-)
-
-    if not plant_height_input and latest_monitoring:
-
-        plant_height_input = latest_monitoring.get(
-        "plant_height"
-    )  
-
-# =====================================================
-# HEALTH CONDITION
-# =====================================================        
-
-    health_condition = request.form.get(
-    "health_condition"
-)
-
-    if not health_condition and latest_monitoring:
-
-        health_condition = latest_monitoring.get(
-        "leaf_condition"
-    )  
-
-# =====================================================
-# EXPECTED HEIGHT
-# =====================================================
-
-    expected_height_input = request.form.get(
-    "expected_height"
-)
-
-# If farmer does not enter expected height,
-# estimate it from the crop's expected growth.
-    if not expected_height_input and crop_name:
-
-        expected_height_data = {
-
-        "rice": 100,
-        "wheat": 90,
-        "ragi": 100,
-        "maize": 200,
-        "groundnut": 50,
-        "cotton": 150,
-        "soybean": 80,
-        "chickpea (gram)": 60,
-        "chickpea": 60,
-        "mustard": 120,
-        "barley": 90,
-        "lentil": 40,
-        "peas": 60,
-        "pigeon pea (tur)": 180,
-        "pearl millet (bajra)": 150,
-        "safflower": 100,
-        "rabi sorghum (jowar)": 150
-    }
-
-    expected_height_input = expected_height_data.get(
-        crop_name.lower().strip()
-    )        
-
-
-    # =====================================================
-    # CHECK INPUTS
-    # =====================================================
-
-    if not crop_name:
-
-        return render_template(
-        "yield.html",
-        error="Please select a crop from Module 3."
-    )
-
-
-    if not farm_area_input:
-
-        return render_template(
-        "yield.html",
-        error="Farm area is not available. "
-              "Please complete Module 3."
-    )
-
-
-    if not crop_week_input:
-
-        return render_template(
-        "yield.html",
-        error="No monitoring record found. "
-              "Please complete Module 4 first."
-    )
-
-
-    if not plant_height_input:
-
-        return render_template(
-        "yield.html",
-        error="Plant height is not available. "
-              "Please complete Module 4 first."
-    )
-
-
-    if not expected_height_input:
-
-        return render_template(
-        "yield.html",
-        error="Please enter the expected plant height."
-    )
-
-
-    if not health_condition:
-
-        return render_template(
-        "yield.html",
-        error="Crop health information is not available. "
-              "Please complete Module 4 first."
-    )
-
-    # =====================================================
-# CONVERT VALUES
-# =====================================================
-
-    try:
-
-        farm_area = float(
-        farm_area_input
-    )
-
-        crop_week = int(
-        crop_week_input
-    )
-
-        plant_height = float(
-        plant_height_input
-    )
-
-        expected_height = float(
-        expected_height_input
-    )
-
-    except (ValueError, TypeError):
-
-        return render_template(
-        "yield.html",
-            error="Unable to process the farm data. "
-              "Please check the previous modules."
-    )
-
-
-    # =====================================================
-    # BASIC VALIDATION
-    # =====================================================
-
-    if farm_area <= 0:
-
-        return render_template(
-        "yield.html",
-        error="Farm area must be greater than zero."
-    )
-
-
-    if crop_week <= 0:
-
-        return render_template(
-        "yield.html",
-        error="Crop week must be greater than zero."
-    )
-
-
-    if plant_height < 0:
-
-        return render_template(
-        "yield.html",
-        error="Plant height cannot be negative."
-    )
-
-
-    if expected_height <= 0:
-
-        return render_template(
-        "yield.html",
-            error="Expected height must be greater than zero."
-    )
-
-
-    # =====================================================
-    # CROP BASE YIELD DATABASE
-    #
-    # Approximate prototype values in tonnes/hectare.
-    #
-    # These are NOT official agricultural forecasts.
-    # They are used only to demonstrate the concept.
+    # CROP HARVEST INFORMATION
     # =====================================================
 
     crop_yield_data = {
@@ -2277,6 +1324,11 @@ def yield_prediction():
             "harvest_week": 17
         },
 
+        "soyabean": {
+            "yield": 1.4,
+            "harvest_week": 17
+        },
+
         "chickpea": {
             "yield": 1.8,
             "harvest_week": 18
@@ -2312,7 +1364,17 @@ def yield_prediction():
             "harvest_week": 24
         },
 
+        "tur": {
+            "yield": 1.2,
+            "harvest_week": 24
+        },
+
         "pearl millet (bajra)": {
+            "yield": 1.5,
+            "harvest_week": 14
+        },
+
+        "bajra": {
             "yield": 1.5,
             "harvest_week": 14
         },
@@ -2325,57 +1387,784 @@ def yield_prediction():
         "rabi sorghum (jowar)": {
             "yield": 1.2,
             "harvest_week": 18
-        }
+        },
 
+        "jowar": {
+            "yield": 1.2,
+            "harvest_week": 18
+        }
     }
 
 
     # =====================================================
-    # FIND CROP
+    # CHECK WHETHER CROP HAS REACHED HARVEST WEEK
     # =====================================================
 
     crop_key = crop_name.lower().strip()
 
-
-    if crop_key in crop_yield_data:
-
-        crop_data = crop_yield_data[
-            crop_key
-        ]
-
-    else:
-
-        # Default prototype values
-
-        crop_data = {
-
-            "yield": 1.5,
-
-            "harvest_week": 16
-
-        }
-
-
-    base_yield_per_hectare = crop_data[
-        "yield"
-    ]
-
-    harvest_week = crop_data[
-        "harvest_week"
-    ]
-
-
-    # =====================================================
-    # PLANT GROWTH FACTOR
-    # =====================================================
-
-    height_ratio = (
-        plant_height /
-        expected_height
+    crop_info = crop_yield_data.get(
+        crop_key
     )
 
 
-    # Prevent unrealistic values
+    if crop_info:
+
+        harvest_week = crop_info[
+            "harvest_week"
+        ]
+
+
+        if crop_week >= harvest_week:
+
+            # =================================================
+            # CALCULATE HARVEST DATE
+            # =================================================
+
+            harvest_date = datetime.now().strftime(
+                "%d-%m-%Y %H:%M"
+            )
+
+            harvest_day = datetime.now().strftime(
+                "%d-%m-%Y"
+            )
+
+
+            # =================================================
+            # GET YIELD DATA
+            # =================================================
+
+            yield_data = farm_data.get(
+                "yield",
+                {}
+            )
+
+            final_yield_tonnes = (
+                yield_data.get(
+                    "total_yield_tonnes"
+                )
+            )
+
+
+            # =================================================
+            # FALLBACK YIELD CALCULATION
+            # =================================================
+
+            if final_yield_tonnes is None:
+
+                crop_data = farm_data.get(
+                    "crop",
+                    {}
+                )
+
+                farm_area = crop_data.get(
+                    "farm_area"
+                )
+
+
+                if farm_area:
+
+                    farm_area_hectare = (
+                        float(farm_area)
+                        * 0.404686
+                    )
+
+                    final_yield_tonnes = (
+                        crop_info["yield"]
+                        * farm_area_hectare
+                    )
+
+                    final_yield_tonnes = round(
+                        final_yield_tonnes,
+                        2
+                    )
+
+
+            # =================================================
+            # SAVE HARVEST
+            # =================================================
+
+            if final_yield_tonnes is not None:
+
+                connection = get_db_connection()
+
+
+                # -------------------------------------------------
+                # CHECK FOR HARVEST ON THE SAME DATE
+                # -------------------------------------------------
+
+                existing_harvest = connection.execute("""
+                    SELECT id
+                    FROM harvests
+                    WHERE LOWER(crop_name) = LOWER(?)
+                    AND SUBSTR(harvest_date, 1, 10) = ?
+                    LIMIT 1
+                """, (
+
+                    crop_name,
+
+                    harvest_day
+                )).fetchone()
+
+
+                # -------------------------------------------------
+                # CREATE HARVEST ONLY IF NOT ALREADY HARVESTED
+                # TODAY
+                # -------------------------------------------------
+
+                if existing_harvest is None:
+
+                    connection.execute("""
+                        INSERT INTO harvests
+                        (
+                            crop_name,
+                            harvest_week,
+                            total_yield_tonnes,
+                            harvest_date
+                        )
+                        VALUES (?, ?, ?, ?)
+                    """, (
+
+                        crop_name,
+
+                        harvest_week,
+
+                        final_yield_tonnes,
+
+                        harvest_date
+                    ))
+
+
+                # =================================================
+                # DELETE WEEKLY MONITORING RECORDS
+                # =================================================
+
+                if crop_key in [
+                    "soybean",
+                    "soyabean"
+                ]:
+
+                    connection.execute("""
+                        DELETE FROM monitoring
+                        WHERE LOWER(crop_name)
+                        IN ('soybean', 'soyabean')
+                    """)
+
+                else:
+
+                    connection.execute("""
+                        DELETE FROM monitoring
+                        WHERE LOWER(crop_name) = LOWER(?)
+                    """, (
+
+                        crop_name,
+
+                    ))
+
+
+                connection.commit()
+
+                connection.close()
+
+
+                # =================================================
+                # SAVE HARVEST INFORMATION
+                # =================================================
+
+                farm_data["harvest"] = {
+
+                        "crop_name":
+                        crop_name,
+
+                        "harvest_week":
+                        harvest_week,
+
+                        "total_yield_tonnes":
+                        final_yield_tonnes,
+
+                        "harvest_date":
+                        harvest_date
+                }
+
+
+                # =================================================
+                # KEEP LATEST MONITORING DATA FOR DASHBOARD
+                # =================================================
+
+                farm_data["latest_monitoring"] = record
+
+
+    # =====================================================
+    # WEEK-TO-WEEK GROWTH COMPARISON
+    # =====================================================
+
+    growth_message = None
+
+
+    if len(monitoring_records) >= 2:
+
+        previous_record = monitoring_records[-2]
+
+        previous_height = (
+            previous_record[
+                "plant_height"
+            ]
+        )
+
+        current_height = plant_height
+
+        growth = (
+            current_height
+            - previous_height
+        )
+
+
+        if growth > 0:
+
+            growth_message = (
+                f"Plant height increased by "
+                f"{growth:.1f} cm "
+                f"since the previous monitoring."
+            )
+
+
+        elif growth == 0:
+
+            growth_message = (
+                "Plant height has not changed "
+                "since the previous monitoring."
+            )
+
+
+        else:
+
+            growth_message = (
+                "Plant height is lower than the "
+                "previous record. Please verify "
+                "the measurements."
+            )
+
+
+    # =====================================================
+    # DISPLAY MONITORING PAGE
+    # =====================================================
+
+    return render_template(
+
+        "monitoring.html",
+
+        records=monitoring_records,
+
+        recommendations=
+            farm_data["crop"].get(
+                "recommendations",
+                []
+            ),
+
+        success=True,
+
+        growth_message=growth_message,
+
+        latest_monitoring=record
+    )
+
+
+
+
+
+
+
+# =========================================================
+# MODULE 5 - YIELD PREDICTION
+# =========================================================
+
+
+# =========================================================
+# MODULE 7 - YIELD PREDICTION
+# =========================================================
+
+@app.route("/yield", methods=["GET", "POST"])
+def yield_prediction():
+
+    # ---------------------------------------------------------
+    # EXPECTED CROP HEIGHT DATABASE
+    # ---------------------------------------------------------
+    expected_height_data = {
+        "rice": 100,
+        "wheat": 90,
+        "ragi": 100,
+        "maize": 200,
+        "groundnut": 50,
+        "cotton": 150,
+        "soybean": 80,
+        "soyabean": 80,
+
+        "chickpea": 60,
+        "chickpea (gram)": 60,
+
+        "mustard": 120,
+        "barley": 90,
+        "lentil": 40,
+        "peas": 60,
+
+        "pigeon pea (tur)": 180,
+        "tur": 180,
+        "pearl millet (bajra)": 150,
+        "bajra": 150,
+        "safflower": 100,
+        "rabi sorghum (jowar)": 150,
+        "jowar": 150
+    }
+
+
+    # ---------------------------------------------------------
+    # GET REQUEST
+    # ---------------------------------------------------------
+    if request.method == "GET":
+
+        crop_data = farm_data.get("crop", {})
+        latest_monitoring = farm_data.get("latest_monitoring")
+        recommendations = crop_data.get("recommendations", [])
+
+        # Get crop automatically from monitoring
+        crop_name = None
+
+        if latest_monitoring:
+            crop_name = latest_monitoring.get("crop_name")
+
+        # If no monitoring data, use recommended crop
+        if not crop_name and recommendations:
+            crop_name = recommendations[0].get("name")
+
+        # Default values
+        crop_week = None
+        plant_height = None
+        health_condition = None
+        expected_height = None
+
+        # -----------------------------------------------------
+        # AUTOMATICALLY FIND EXPECTED HEIGHT
+        # -----------------------------------------------------
+        if crop_name:
+
+            crop_key = crop_name.lower().strip()
+
+            expected_height = expected_height_data.get(crop_key)
+
+
+        # -----------------------------------------------------
+        # GET MONITORING DATA
+        # -----------------------------------------------------
+        if latest_monitoring:
+
+            crop_week = latest_monitoring.get("week")
+
+            plant_height = latest_monitoring.get("plant_height")
+
+            health_condition = latest_monitoring.get("leaf_condition")
+
+
+        return render_template(
+            "yield.html",
+
+            recommendations=recommendations,
+
+            latest_monitoring=latest_monitoring,
+
+            crop_name=crop_name,
+
+            farm_area=crop_data.get("farm_area"),
+
+            crop_week=crop_week,
+
+            plant_height=plant_height,
+
+            health_condition=health_condition,
+
+            expected_height=expected_height
+        )
+
+
+    # =========================================================
+    # POST REQUEST
+    # =========================================================
+
+    crop_data = farm_data.get("crop", {})
+
+    latest_monitoring = farm_data.get("latest_monitoring")
+
+
+    # ---------------------------------------------------------
+    # CROP NAME
+    # ---------------------------------------------------------
+
+    crop_name = None
+
+    # IMPORTANT:
+    # Always prefer the crop from monitoring
+
+    if latest_monitoring:
+
+        monitored_crop = latest_monitoring.get("crop_name")
+
+        if monitored_crop:
+            crop_name = monitored_crop
+
+
+    # If no monitoring crop, use selected crop
+    if not crop_name:
+
+        crop_name = crop_data.get("selected_crop")
+
+
+    # ---------------------------------------------------------
+    # FARM AREA
+    # ---------------------------------------------------------
+
+    farm_area_input = request.form.get("farm_area")
+
+    if not farm_area_input:
+
+        farm_area_input = crop_data.get("farm_area")
+
+
+    # ---------------------------------------------------------
+    # CROP WEEK
+    # ---------------------------------------------------------
+
+    crop_week_input = request.form.get("crop_week")
+
+    if not crop_week_input and latest_monitoring:
+
+        crop_week_input = latest_monitoring.get("week")
+
+
+    # ---------------------------------------------------------
+    # PLANT HEIGHT
+    # ---------------------------------------------------------
+
+    plant_height_input = request.form.get("plant_height")
+
+    if not plant_height_input and latest_monitoring:
+
+        plant_height_input = latest_monitoring.get("plant_height")
+
+
+    # ---------------------------------------------------------
+    # HEALTH CONDITION
+    # ---------------------------------------------------------
+
+    health_condition = request.form.get("health_condition")
+
+    if not health_condition and latest_monitoring:
+
+        health_condition = latest_monitoring.get("leaf_condition")
+
+
+    # ---------------------------------------------------------
+    # AUTOMATIC EXPECTED HEIGHT
+    # ---------------------------------------------------------
+
+    expected_height = None
+
+    if crop_name:
+
+        crop_key = crop_name.lower().strip()
+
+        expected_height = expected_height_data.get(crop_key)
+
+
+    # ---------------------------------------------------------
+    # VALIDATION
+    # ---------------------------------------------------------
+
+    if not crop_name:
+
+        return render_template(
+            "yield.html",
+            error="No crop information is available. Please complete crop monitoring first.",
+            crop_name=crop_name,
+            farm_area=farm_area_input,
+            crop_week=crop_week_input,
+            plant_height=plant_height_input,
+            health_condition=health_condition,
+            expected_height=expected_height
+        )
+
+
+    if not farm_area_input:
+
+        return render_template(
+            "yield.html",
+            error="Farm area is required.",
+            crop_name=crop_name,
+            farm_area=farm_area_input,
+            crop_week=crop_week_input,
+            plant_height=plant_height_input,
+            health_condition=health_condition,
+            expected_height=expected_height
+        )
+
+
+    if not crop_week_input:
+
+        return render_template(
+            "yield.html",
+            error="Crop week is required.",
+            crop_name=crop_name,
+            farm_area=farm_area_input,
+            crop_week=crop_week_input,
+            plant_height=plant_height_input,
+            health_condition=health_condition,
+            expected_height=expected_height
+        )
+
+
+    if not plant_height_input:
+
+        return render_template(
+            "yield.html",
+            error="Plant height is required.",
+            crop_name=crop_name,
+            farm_area=farm_area_input,
+            crop_week=crop_week_input,
+            plant_height=plant_height_input,
+            health_condition=health_condition,
+            expected_height=expected_height
+        )
+
+
+    if not expected_height:
+
+        return render_template(
+            "yield.html",
+            error="Expected height for this crop is not available.",
+            crop_name=crop_name,
+            farm_area=farm_area_input,
+            crop_week=crop_week_input,
+            plant_height=plant_height_input,
+            health_condition=health_condition,
+            expected_height=expected_height
+        )
+
+
+    # ---------------------------------------------------------
+    # CONVERT VALUES
+    # ---------------------------------------------------------
+
+    try:
+
+        farm_area = float(farm_area_input)
+
+        crop_week = int(crop_week_input)
+
+        plant_height = float(plant_height_input)
+
+        expected_height = float(expected_height)
+
+    except ValueError:
+
+        return render_template(
+            "yield.html",
+            error="Please enter valid numerical values.",
+            crop_name=crop_name,
+            farm_area=farm_area_input,
+            crop_week=crop_week_input,
+            plant_height=plant_height_input,
+            health_condition=health_condition,
+            expected_height=expected_height
+        )
+
+
+    # ---------------------------------------------------------
+    # VALIDATION RANGES
+    # ---------------------------------------------------------
+
+    if farm_area <= 0:
+
+        return render_template(
+            "yield.html",
+            error="Farm area must be greater than zero.",
+            crop_name=crop_name,
+            farm_area=farm_area,
+            crop_week=crop_week,
+            plant_height=plant_height,
+            health_condition=health_condition,
+            expected_height=expected_height
+        )
+
+
+    if crop_week <= 0:
+
+        return render_template(
+            "yield.html",
+            error="Crop week must be greater than zero.",
+            crop_name=crop_name,
+            farm_area=farm_area,
+            crop_week=crop_week,
+            plant_height=plant_height,
+            health_condition=health_condition,
+            expected_height=expected_height
+        )
+
+
+    if plant_height <= 0:
+
+        return render_template(
+            "yield.html",
+            error="Plant height must be greater than zero.",
+            crop_name=crop_name,
+            farm_area=farm_area,
+            crop_week=crop_week,
+            plant_height=plant_height,
+            health_condition=health_condition,
+            expected_height=expected_height
+        )
+
+
+    # =========================================================
+    # CROP YIELD DATABASE
+    # =========================================================
+
+    crop_yield_data = {
+
+        "rice": {
+            "yield": 3.5,
+            "harvest_week": 18
+        },
+
+        "wheat": {
+            "yield": 3.2,
+            "harvest_week": 16
+        },
+
+        "ragi": {
+            "yield": 1.8,
+            "harvest_week": 16
+        },
+
+        "maize": {
+            "yield": 3.5,
+            "harvest_week": 15
+        },
+
+        "groundnut": {
+            "yield": 1.8,
+            "harvest_week": 16
+        },
+
+        "cotton": {
+            "yield": 1.5,
+            "harvest_week": 24
+        },
+
+        "soybean": {
+            "yield": 1.4,
+            "harvest_week": 17
+        },
+
+        "soyabean": {
+            "yield": 1.4,
+            "harvest_week": 17
+        },
+
+        "chickpea": {
+            "yield": 1.8,
+            "harvest_week": 18
+        },
+
+        "chickpea (gram)": {
+            "yield": 1.8,
+            "harvest_week": 18
+        },
+
+        "mustard": {
+            "yield": 1.4,
+            "harvest_week": 16
+        },
+
+        "barley": {
+            "yield": 2.5,
+            "harvest_week": 16
+        },
+
+        "lentil": {
+            "yield": 1.2,
+            "harvest_week": 16
+        },
+
+        "peas": {
+            "yield": 2.0,
+            "harvest_week": 15
+        },
+
+        "pigeon pea (tur)": {
+            "yield": 1.2,
+            "harvest_week": 24
+        },
+
+        "tur": {
+            "yield": 1.2,
+            "harvest_week": 24
+        },
+
+        "pearl millet (bajra)": {
+            "yield": 1.5,
+            "harvest_week": 14
+        },
+
+        "bajra": {
+            "yield": 1.5,
+            "harvest_week": 14
+        },
+
+        "safflower": {
+            "yield": 1.0,
+            "harvest_week": 18
+        },
+
+        "rabi sorghum (jowar)": {
+            "yield": 1.2,
+            "harvest_week": 18
+        },
+
+        "jowar": {
+            "yield": 1.2,
+            "harvest_week": 18
+        }
+    }
+
+
+    # ---------------------------------------------------------
+    # GET CROP YIELD DATA
+    # ---------------------------------------------------------
+
+    crop_key = crop_name.lower().strip()
+
+    if crop_key in crop_yield_data:
+
+        selected_crop_data = crop_yield_data[crop_key]
+
+    else:
+
+        selected_crop_data = {
+            "yield": 1.5,
+            "harvest_week": 16
+        }
+
+
+    base_yield_per_hectare = selected_crop_data["yield"]
+
+    harvest_week = selected_crop_data["harvest_week"]
+
+
+    # =========================================================
+    # HEIGHT RATIO
+    # =========================================================
+
+    height_ratio = plant_height / expected_height
+
+
+    # Keep ratio between 0 and 1
 
     if height_ratio > 1:
 
@@ -2386,104 +2175,72 @@ def yield_prediction():
         height_ratio = 0
 
 
-    # =====================================================
+    # =========================================================
     # HEALTH FACTOR
-    # =====================================================
+    # =========================================================
+
     health_factors = {
 
-    "healthy": 1.00,
+        "healthy": 1.00,
 
-    "slightly_yellow": 0.90,
+        "slightly_yellow": 0.90,
 
-    "yellow": 0.80,
+        "yellow": 0.80,
 
-    "dry": 0.70,
+        "dry": 0.70,
 
-    "spots": 0.65
-
+        "spots": 0.65
     }
 
 
     health_factor = health_factors.get(
-
         health_condition,
-
         0.75
-
     )
 
 
-    # =====================================================
+    # =========================================================
     # GROWTH FACTOR
-    # =====================================================
+    # =========================================================
 
-    # We don't want height alone to completely
-    # determine yield.
-
-    growth_factor = (
-
-        0.5 +
-
-        (0.5 * height_ratio)
-
-    )
+    growth_factor = 0.5 + (0.5 * height_ratio)
 
 
-    # =====================================================
-    # ESTIMATE YIELD
-    # =====================================================
+    # =========================================================
+    # ESTIMATED YIELD
+    # =========================================================
 
     estimated_yield_per_hectare = (
-
         base_yield_per_hectare
-
         * growth_factor
-
         * health_factor
-
     )
 
 
-    # =====================================================
-    # FARM AREA
-    #
-    # Farmer enters acres.
-    #
-    # 1 acre = 0.404686 hectare
-    # =====================================================
+    # ---------------------------------------------------------
+    # CONVERT FARM AREA
+    # Acres -> Hectares
+    # ---------------------------------------------------------
 
-    farm_area_hectare = (
-
-        farm_area * 0.404686
-
-    )
+    farm_area_hectare = farm_area * 0.404686
 
 
-    # =====================================================
-    # TOTAL ESTIMATED YIELD
-    # =====================================================
+    # ---------------------------------------------------------
+    # TOTAL YIELD
+    # ---------------------------------------------------------
 
     total_yield_tonnes = (
-
         estimated_yield_per_hectare
-
         * farm_area_hectare
-
     )
 
 
-    # Convert tonnes to kg
-
-    total_yield_kg = (
-
-        total_yield_tonnes * 1000
-
-    )
+    total_yield_kg = total_yield_tonnes * 1000
 
 
-    # =====================================================
-    # YIELD STATUS
-    # =====================================================
+    # =========================================================
+    # GROWTH STATUS
+    # =========================================================
 
     if height_ratio >= 0.90:
 
@@ -2502,18 +2259,11 @@ def yield_prediction():
         growth_status = "Needs Attention"
 
 
-    # =====================================================
-    # HARVEST ESTIMATION
-    # =====================================================
+    # =========================================================
+    # HARVEST REMAINING WEEKS
+    # =========================================================
 
-    remaining_weeks = (
-
-        harvest_week -
-
-        crop_week
-
-    )
-
+    remaining_weeks = harvest_week - crop_week
 
     if remaining_weeks < 0:
 
@@ -2523,54 +2273,48 @@ def yield_prediction():
     if remaining_weeks == 0:
 
         harvest_message = (
-
-            "The crop may be approaching "
-            "its expected harvest period."
-
+            "🌾 The crop may be ready for harvesting. "
+            "Check the crop carefully before harvesting."
         )
 
-    elif remaining_weeks == 1:
+    elif remaining_weeks <= 2:
 
         harvest_message = (
-
-            "Approximately 1 week remaining "
-            "until the expected harvest period."
-
+            "🌾 Harvest time is approaching. "
+            "Start preparing labour, storage and transportation."
         )
 
     else:
 
         harvest_message = (
-
-            f"Approximately {remaining_weeks} "
-            f"weeks remaining until the expected "
-            f"harvest period."
-
+            f"🌱 Approximately {remaining_weeks} "
+            "weeks may remain before the expected harvest period."
         )
 
 
-    # =====================================================
+    # =========================================================
     # CONFIDENCE
-    #
-    # Prototype confidence based on amount of
-    # information available.
-    # =====================================================
+    # =========================================================
 
     confidence = 50
+
 
     if plant_height > 0:
 
         confidence += 10
 
+
     if expected_height > 0:
 
         confidence += 10
+
 
     if health_condition:
 
         confidence += 10
 
-    if crop_key in crop_yield_data:
+
+    if crop_name:
 
         confidence += 10
 
@@ -2580,60 +2324,58 @@ def yield_prediction():
         confidence = 90
 
 
-
-# =====================================================
-# SAVE YIELD RESULT FOR OTHER MODULES
-# =====================================================
+    # =========================================================
+    # SAVE YIELD DATA
+    # =========================================================
 
     farm_data["yield"] = {
 
-    "crop_name": crop_name,
+        "crop_name": crop_name,
 
-    "farm_area": farm_area,
+        "farm_area": farm_area,
 
-    "crop_week": crop_week,
+        "crop_week": crop_week,
 
-    "plant_height": plant_height,
+        "plant_height": plant_height,
 
-    "expected_height": expected_height,
+        "expected_height": expected_height,
 
-    "growth_status": growth_status,
+        "growth_status": growth_status,
 
-    "estimated_yield_per_hectare":
-        round(
-            estimated_yield_per_hectare,
-            2
-        ),
+        "estimated_yield_per_hectare":
+            round(estimated_yield_per_hectare, 2),
 
-    "total_yield_tonnes":
-        round(
-            total_yield_tonnes,
-            2
-        ),
+        "total_yield_tonnes":
+            round(total_yield_tonnes, 2),
 
-    "total_yield_kg":
-        round(
-            total_yield_kg,
-            0
-        ),
+        "total_yield_kg":
+            round(total_yield_kg, 0),
 
-    "harvest_week": harvest_week,
+        "harvest_week": harvest_week,
 
-    "remaining_weeks": remaining_weeks,
+        "remaining_weeks": remaining_weeks,
 
-    "confidence": confidence
+        "confidence": confidence
+    }
 
-    }    
 
-    # =====================================================
-    # RESULT
-    # =====================================================
+    # =========================================================
+    # DISPLAY RESULT
+    # =========================================================
 
     return render_template(
 
         "yield.html",
 
         success=True,
+
+        recommendations=
+            farm_data.get("crop", {}).get(
+                "recommendations",
+                []
+            ),
+
+        latest_monitoring=latest_monitoring,
 
         crop_name=crop_name,
 
@@ -2645,30 +2387,27 @@ def yield_prediction():
 
         expected_height=expected_height,
 
+        health_condition=health_condition,
+
         growth_status=growth_status,
 
-        estimated_yield_per_hectare=round(
-            estimated_yield_per_hectare,
-            2
-        ),
+        estimated_yield_per_hectare=
+            round(estimated_yield_per_hectare, 2),
 
-        total_yield_tonnes=round(
-            total_yield_tonnes,
-            2
-        ),
+        total_yield_tonnes=
+            round(total_yield_tonnes, 2),
 
-        total_yield_kg=round(
-            total_yield_kg,
-            0
-        ),
-
-        harvest_message=harvest_message,
+        total_yield_kg=
+            round(total_yield_kg, 0),
 
         harvest_week=harvest_week,
 
-        confidence=confidence
+        remaining_weeks=remaining_weeks,
 
-    )  
+        harvest_message=harvest_message,
+
+        confidence=confidence
+    ) 
 
 # =========================================================
 # MODULE 6 - FARMER ADVISORY & HARVEST PLANNING
@@ -2700,8 +2439,9 @@ def advisory():
         {}
     )
 
+
     # =====================================================
-    # GET CROP FROM LATEST MONITORING
+    # GET CROP DETAILS FROM LATEST MONITORING
     # =====================================================
 
     crop_name = None
@@ -2713,6 +2453,7 @@ def advisory():
     plant_height = None
 
     plant_problem = None
+
 
     if latest_monitoring:
 
@@ -2736,10 +2477,10 @@ def advisory():
             "plant_problem"
         )
 
+
     # =====================================================
     # FALLBACK TO CROP RECOMMENDATION
     # =====================================================
-    # Used only if no monitoring record exists.
 
     if not crop_name:
 
@@ -2754,6 +2495,7 @@ def advisory():
                 "name"
             )
 
+
     # =====================================================
     # FALLBACK FOR CROP WEEK
     # =====================================================
@@ -2764,6 +2506,7 @@ def advisory():
             "crop_week"
         )
 
+
     # =====================================================
     # FALLBACK FOR HEALTH
     # =====================================================
@@ -2773,6 +2516,146 @@ def advisory():
         health_condition = request.form.get(
             "health_condition"
         )
+
+
+    # =====================================================
+    # BASIC CROP VALIDATION
+    # =====================================================
+
+    if not crop_name:
+
+        return render_template(
+
+            "advisory.html",
+
+            error=(
+                "No crop information is available. "
+                "Please complete crop monitoring first."
+            ),
+
+            crop_name="",
+
+            crop_week="",
+
+            health_condition="",
+
+            submitted=False
+        )
+
+
+    # =====================================================
+    # BASIC CROP WEEK VALIDATION
+    # =====================================================
+
+    if crop_week is None:
+
+        return render_template(
+
+            "advisory.html",
+
+            error=(
+                "No crop week is available. "
+                "Please complete crop monitoring first."
+            ),
+
+            crop_name=crop_name,
+
+            crop_week="",
+
+            health_condition=health_condition,
+
+            submitted=False
+        )
+
+
+    # =====================================================
+    # CONVERT CROP WEEK
+    # =====================================================
+
+    try:
+
+        crop_week = int(
+            crop_week
+        )
+
+    except (ValueError, TypeError):
+
+        return render_template(
+
+            "advisory.html",
+
+            error="Crop week must be a number.",
+
+            crop_name=crop_name,
+
+            crop_week=crop_week,
+
+            health_condition=health_condition,
+
+            submitted=False
+        )
+
+
+    # =====================================================
+    # IMPORTANT:
+    # DO NOT GENERATE ADVISORY ON GET
+    # =====================================================
+
+    if request.method == "GET":
+
+        return render_template(
+
+            "advisory.html",
+
+            crop_name=crop_name,
+
+            crop_week=crop_week,
+
+            plant_height=plant_height,
+
+            health_condition=health_condition,
+
+            farm_area=crop_data.get(
+                "farm_area"
+            ),
+
+            soil_type=crop_data.get(
+                "soil_type"
+            ),
+
+            ph=crop_data.get(
+                "ph"
+            ),
+
+            irrigation=crop_data.get(
+                "irrigation"
+            ),
+
+            season=crop_data.get(
+                "season"
+            ),
+
+            estimated_yield_per_hectare=
+                yield_data.get(
+                    "estimated_yield_per_hectare"
+                ),
+
+            total_yield_tonnes=
+                yield_data.get(
+                    "total_yield_tonnes"
+                ),
+
+            weather_data=weather_data,
+
+            submitted=False
+        )
+
+
+    # =====================================================
+    # FROM THIS POINT ONWARD:
+    # ADVISORY IS GENERATED ONLY AFTER POST
+    # =====================================================
+
 
     # =====================================================
     # CONVERT MONITORING HEALTH TO ADVISORY HEALTH
@@ -2802,6 +2685,7 @@ def advisory():
 
         advisory_health = health_condition
 
+
     # =====================================================
     # GET RAINFALL FROM WEATHER MODULE
     # =====================================================
@@ -2815,6 +2699,7 @@ def advisory():
     )
 
     rain_forecast_input = None
+
 
     if tomorrow_probability is not None:
 
@@ -2834,8 +2719,9 @@ def advisory():
 
             rain_forecast_input = "none"
 
+
     # =====================================================
-    # IF NO WEATHER DATA
+    # VALIDATE WEATHER
     # =====================================================
 
     if not rain_forecast_input:
@@ -2852,6 +2738,8 @@ def advisory():
             crop_name=crop_name,
 
             crop_week=crop_week,
+
+            plant_height=plant_height,
 
             health_condition=health_condition,
 
@@ -2873,63 +2761,11 @@ def advisory():
 
             season=crop_data.get(
                 "season"
-            )
-        )
-
-    # =====================================================
-    # VALIDATE CROP
-    # =====================================================
-
-    if not crop_name:
-
-        return render_template(
-
-            "advisory.html",
-
-            error=(
-                "No crop information is available. "
-                "Please complete crop monitoring first."
-            )
-        )
-
-    # =====================================================
-    # VALIDATE CROP WEEK
-    # =====================================================
-
-    if crop_week is None:
-
-        return render_template(
-
-            "advisory.html",
-
-            error=(
-                "No crop week is available. "
-                "Please complete crop monitoring first."
             ),
 
-            crop_name=crop_name
+            submitted=False
         )
 
-    # =====================================================
-    # CONVERT CROP WEEK
-    # =====================================================
-
-    try:
-
-        crop_week = int(
-            crop_week
-        )
-
-    except (ValueError, TypeError):
-
-        return render_template(
-
-            "advisory.html",
-
-            error="Crop week must be a number.",
-
-            crop_name=crop_name
-        )
 
     # =====================================================
     # VALIDATE HEALTH
@@ -2948,8 +2784,15 @@ def advisory():
 
             crop_name=crop_name,
 
-            crop_week=crop_week
+            crop_week=crop_week,
+
+            plant_height=plant_height,
+
+            health_condition=health_condition,
+
+            submitted=False
         )
+
 
     # =====================================================
     # CROP HARVEST DATABASE
@@ -2985,6 +2828,10 @@ def advisory():
             "harvest_week": 17
         },
 
+        "soyabean": {
+            "harvest_week": 17
+        },
+
         "chickpea": {
             "harvest_week": 18
         },
@@ -3013,7 +2860,15 @@ def advisory():
             "harvest_week": 24
         },
 
+        "tur": {
+            "harvest_week": 24
+        },
+
         "pearl millet (bajra)": {
+            "harvest_week": 14
+        },
+
+        "bajra": {
             "harvest_week": 14
         },
 
@@ -3023,10 +2878,15 @@ def advisory():
 
         "rabi sorghum (jowar)": {
             "harvest_week": 18
+        },
+        "jowar": {
+            "harvest_week": 18
         }
     }
 
+
     crop_key = crop_name.lower().strip()
+
 
     if crop_key in harvest_data:
 
@@ -3038,6 +2898,7 @@ def advisory():
 
         harvest_week = 16
 
+
     # =====================================================
     # HARVEST ADVISORY
     # =====================================================
@@ -3046,6 +2907,7 @@ def advisory():
         harvest_week -
         crop_week
     )
+
 
     if remaining_weeks <= 0:
 
@@ -3057,6 +2919,7 @@ def advisory():
 
         harvest_status = "Ready / Near Harvest"
 
+
     elif remaining_weeks <= 2:
 
         harvest_advice = (
@@ -3067,6 +2930,7 @@ def advisory():
 
         harvest_status = "Harvest Approaching"
 
+
     else:
 
         harvest_advice = (
@@ -3076,6 +2940,7 @@ def advisory():
         )
 
         harvest_status = "Growing"
+
 
     # =====================================================
     # IRRIGATION ADVISORY
@@ -3091,6 +2956,7 @@ def advisory():
 
         irrigation_status = "Avoid Irrigation"
 
+
     elif rain_forecast_input == "moderate":
 
         irrigation_advice = (
@@ -3100,6 +2966,7 @@ def advisory():
         )
 
         irrigation_status = "Reduce Irrigation"
+
 
     elif rain_forecast_input == "light":
 
@@ -3111,6 +2978,7 @@ def advisory():
 
         irrigation_status = "Monitor Soil"
 
+
     else:
 
         irrigation_advice = (
@@ -3120,6 +2988,7 @@ def advisory():
         )
 
         irrigation_status = "Irrigation May Be Needed"
+
 
     # =====================================================
     # HEALTH ADVISORY
@@ -3134,6 +3003,7 @@ def advisory():
 
         health_status = "Healthy"
 
+
     elif advisory_health == "slightly_unhealthy":
 
         health_advice = (
@@ -3143,6 +3013,7 @@ def advisory():
         )
 
         health_status = "Needs Monitoring"
+
 
     elif advisory_health == "moderate":
 
@@ -3154,6 +3025,7 @@ def advisory():
 
         health_status = "Attention Required"
 
+
     else:
 
         health_advice = (
@@ -3164,6 +3036,7 @@ def advisory():
         )
 
         health_status = "High Attention"
+
 
     # =====================================================
     # GENERAL FARMER ADVICE
@@ -3186,6 +3059,7 @@ def advisory():
         "major farm activities."
 
     ]
+
 
     # =====================================================
     # SAVE ADVISORY DATA
@@ -3212,8 +3086,9 @@ def advisory():
         "general_advice": general_advice
     }
 
+
     # =====================================================
-    # RETURN ADVISORY PAGE
+    # RETURN GENERATED ADVISORY
     # =====================================================
 
     return render_template(
@@ -3278,7 +3153,9 @@ def advisory():
 
         remaining_weeks=remaining_weeks,
 
-        weather_data=weather_data
+        weather_data=weather_data,
+
+        submitted=True
     )
 # =========================================================
 # MODULE 7 - INTEGRATED FARM DASHBOARD
@@ -3573,7 +3450,7 @@ def dashboard():
     if remaining_weeks is None:
 
         harvest_status = (
-            "Monitoring Required"
+            "No Crop Monitored"
         )
 
     elif remaining_weeks == 0:
