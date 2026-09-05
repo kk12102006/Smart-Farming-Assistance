@@ -17,6 +17,7 @@
             margin: 0;
 
             padding: 30px;
+
         }
 
 
@@ -25,6 +26,7 @@
             max-width: 1000px;
 
             margin: auto;
+
         }
 
 
@@ -33,6 +35,7 @@
             text-align: center;
 
             margin-bottom: 30px;
+
         }
 
 
@@ -51,12 +54,14 @@
             border-radius: 7px;
 
             margin-bottom: 20px;
+
         }
 
 
         .back-button:hover {
 
             background: #388e3c;
+
         }
 
 
@@ -73,6 +78,7 @@
             box-shadow:
                 0 4px 15px
                 rgba(0,0,0,0.08);
+
         }
 
 
@@ -81,12 +87,14 @@
             margin-top: 0;
 
             color: #2e7d32;
+
         }
 
 
         .label {
 
             font-weight: bold;
+
         }
 
 
@@ -99,6 +107,62 @@
             text-align: center;
 
             border-radius: 12px;
+
+            box-shadow:
+                0 4px 15px
+                rgba(0,0,0,0.08);
+
+        }
+
+
+        .harvested {
+
+            border-left: 6px solid #2e7d32;
+
+        }
+
+
+        .harvested-status {
+
+            color: #2e7d32;
+
+            font-weight: bold;
+
+            font-size: 20px;
+
+        }
+
+
+        .yield {
+
+            font-size: 22px;
+
+            font-weight: bold;
+
+            color: #1b5e20;
+
+        }
+
+
+        .section-title {
+
+            margin-top: 40px;
+
+            margin-bottom: 25px;
+
+            text-align: center;
+
+        }
+
+
+        .divider {
+
+            margin: 45px 0;
+
+            border: none;
+
+            border-top: 2px solid #d8e5d8;
+
         }
 
     </style>
@@ -112,18 +176,27 @@
 <div class="container">
 
 
-    <a href="/dashboard" class="back-button">
+    <!-- BACK TO DASHBOARD -->
+
+    <a href="{{ url_for('dashboard') }}" class="back-button">
 
         ← Back to Dashboard
 
     </a>
 
 
+    <!-- PAGE TITLE -->
+
     <h1>
 
         🌾 Farm Monitoring History
 
     </h1>
+
+
+    <!-- =====================================================
+         WEEKLY MONITORING HISTORY
+    ====================================================== -->
 
 
     {% if records %}
@@ -232,7 +305,11 @@
 
             <p>
 
-                📷 Image:
+                📷 <span class="label">
+
+                    Image:
+
+                </span>
 
                 {{ record["image"] }}
 
@@ -263,6 +340,117 @@
 
                 Submit a weekly crop monitoring
                 record to see it here.
+
+            </p>
+
+        </div>
+
+
+    {% endif %}
+
+
+
+    <!-- =====================================================
+         DIVIDER
+    ====================================================== -->
+
+
+    <hr class="divider">
+
+
+
+    <!-- =====================================================
+         HARVESTED CROPS
+    ====================================================== -->
+
+
+    <h1 class="section-title">
+
+        🌾 Harvested Crops
+
+    </h1>
+
+
+    {% if harvests %}
+
+
+        {% for harvest in harvests %}
+
+
+        <div class="record harvested">
+
+
+            <h2>
+
+                🌱 {{ harvest["crop_name"] }}
+
+            </h2>
+
+
+            <p class="harvested-status">
+
+                ✅ HARVESTED
+
+            </p>
+
+
+            <p>
+
+                <span class="label">
+
+                    Harvest Week:
+
+                </span>
+
+                {{ harvest["harvest_week"] }}
+
+            </p>
+
+
+            <p class="yield">
+
+                Total Estimated Yield:
+
+                {{ harvest["total_yield_tonnes"] }} tons
+
+            </p>
+
+
+            <p>
+
+                <span class="label">
+
+                    Harvested On:
+
+                </span>
+
+                {{ harvest["harvest_date"] }}
+
+            </p>
+
+
+        </div>
+
+
+        {% endfor %}
+
+
+    {% else %}
+
+
+        <div class="no-records">
+
+            <h2>
+
+                No crops harvested yet.
+
+            </h2>
+
+
+            <p>
+
+                A crop will appear here after
+                completing its final monitoring week.
 
             </p>
 

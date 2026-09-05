@@ -45,7 +45,7 @@ def get_db_connection():
 def initialize_database():
 
     connection = get_db_connection()
-
+    # Monitoring table
     connection.execute("""
         CREATE TABLE IF NOT EXISTS monitoring (
 
@@ -66,6 +66,17 @@ def initialize_database():
             image TEXT,
 
             date TEXT NOT NULL
+        )
+    """)
+
+    # Harvest table
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS harvests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            crop_name TEXT NOT NULL,
+            harvest_week INTEGER NOT NULL,
+            total_yield_tonnes REAL NOT NULL,
+            harvest_date TEXT NOT NULL
         )
     """)
 
@@ -1211,6 +1222,207 @@ def monitor():
     
     farm_data["latest_monitoring"] = record
 
+
+    # =====================================================
+    # HARVEST CHECK
+    # =====================================================
+
+    crop_yield_data = {
+
+    "rice": {
+        "yield": 3.5,
+        "harvest_week": 18
+    },
+
+    "wheat": {
+        "yield": 3.2,
+        "harvest_week": 16
+    },
+
+    "ragi": {
+        "yield": 1.8,
+        "harvest_week": 16
+    },
+
+    "maize": {
+        "yield": 3.5,
+        "harvest_week": 15
+    },
+
+    "groundnut": {
+        "yield": 1.8,
+        "harvest_week": 16
+    },
+
+    "cotton": {
+        "yield": 1.5,
+        "harvest_week": 24
+    },
+
+    "soybean": {
+        "yield": 1.4,
+        "harvest_week": 17
+    },
+
+    "chickpea": {
+        "yield": 1.8,
+        "harvest_week": 18
+    },
+
+    "chickpea (gram)": {
+        "yield": 1.8,
+        "harvest_week": 18
+    },
+
+    "mustard": {
+        "yield": 1.4,
+        "harvest_week": 16
+    },
+
+    "barley": {
+        "yield": 2.5,
+        "harvest_week": 16
+    },
+
+    "lentil": {
+        "yield": 1.2,
+        "harvest_week": 16
+    },
+
+    "peas": {
+        "yield": 2.0,
+        "harvest_week": 15
+    },
+
+    "pigeon pea (tur)": {
+        "yield": 1.2,
+        "harvest_week": 24
+    },
+
+    "pearl millet (bajra)": {
+        "yield": 1.5,
+        "harvest_week": 14
+    },
+
+    "safflower": {
+        "yield": 1.0,
+        "harvest_week": 18
+    },
+
+    "rabi sorghum (jowar)": {
+        "yield": 1.2,
+        "harvest_week": 18
+    }
+    }
+
+
+    crop_key = crop_name.lower().strip()
+
+    crop_info = crop_yield_data.get(crop_key)
+
+    harvest_completed = False
+    final_yield_tonnes = None
+    harvest_week = None
+
+    if crop_info:
+
+        harvest_week = crop_info["harvest_week"]
+
+        if int(crop_week) >= harvest_week:
+
+            harvest_completed = True
+
+            # Get the latest yield prediction
+            yield_data = farm_data.get("yield", {})
+
+            final_yield_tonnes = yield_data.get(
+                "total_yield_tonnes"
+            )
+
+            # If yield prediction is not available,
+            # calculate a simple fallback estimate.
+            if final_yield_tonnes is None:
+
+                farm_area = farm_data.get(
+                    "crop", {}).get("farm_area")
+
+                if farm_area:
+
+                    farm_area_hectare = (
+                        float(farm_area) * 0.404686
+                    )
+
+                    final_yield_tonnes = (
+                    crop_info["yield"]
+                    * farm_area_hectare
+                    )
+
+                    final_yield_tonnes = round(
+                        final_yield_tonnes,
+                        2
+                    )
+
+        # Save harvest record
+        if final_yield_tonnes is not None:
+
+            connection = get_db_connection()
+
+            connection.execute("""
+                INSERT INTO harvests
+                (
+                    crop_name,
+                    harvest_week,
+                    total_yield_tonnes,
+                    harvest_date
+                )
+                VALUES (?, ?, ?, ?)
+            """, (
+                crop_name,
+                harvest_week,
+                final_yield_tonnes,
+                datetime.now().strftime(
+                    "%d-%m-%Y %H:%M"
+                )
+            ))
+
+            # Delete weekly monitoring records
+            # for this crop
+            connection.execute("""
+                                        DELETE FROM monitoring
+                WHERE LOWER(crop_name) = LOWER(?)
+                """, (
+                crop_name,
+            ))
+
+            connection.commit()
+            connection.close()
+
+            # Remove from in-memory history
+            monitoring_records[:] = [
+                r for r in monitoring_records
+                if r.get("crop_name", "").lower()
+                != crop_name.lower()
+            ]
+
+            farm_data["monitoring"] = [
+                r for r in farm_data.get(
+                    "monitoring", []
+                )
+                if r.get("crop_name", "").lower()
+                != crop_name.lower()
+            ]
+
+            farm_data["harvest"] = {
+                "crop_name": crop_name,
+                "harvest_week": harvest_week,
+                "total_yield_tonnes":
+                    final_yield_tonnes,
+                "harvest_date":
+                    datetime.now().strftime(
+                        "%d-%m-%Y %H:%M"
+                    )
+            }
+
     # =====================================================
     # SAVE MONITORING RECORD TO DATABASE
     # =====================================================
@@ -1252,6 +1464,317 @@ def monitor():
     connection.commit()
 
     connection.close()
+
+    # =====================================================
+    # HARVEST CHECK
+    # =====================================================
+
+    crop_yield_data = {
+
+    "rice": {
+        "yield": 3.5,
+        "harvest_week": 18
+    },
+
+    "wheat": {
+        "yield": 3.2,
+        "harvest_week": 16
+    },
+
+    "ragi": {
+        "yield": 1.8,
+        "harvest_week": 16
+    },
+
+    "maize": {
+        "yield": 3.5,
+        "harvest_week": 15
+    },
+
+    "groundnut": {
+        "yield": 1.8,
+        "harvest_week": 16
+    },
+
+    "cotton": {
+        "yield": 1.5,
+        "harvest_week": 24
+    },
+
+    "soybean": {
+        "yield": 1.4,
+        "harvest_week": 17
+    },
+
+    "soyabean": {
+        "yield": 1.4,
+        "harvest_week": 17
+    },
+
+    "chickpea": {
+        "yield": 1.8,
+        "harvest_week": 18
+    },
+
+    "chickpea (gram)": {
+        "yield": 1.8,
+        "harvest_week": 18
+    },
+
+    "mustard": {
+        "yield": 1.4,
+        "harvest_week": 16
+    },
+
+    "barley": {
+        "yield": 2.5,
+        "harvest_week": 16
+    },
+
+    "lentil": {
+        "yield": 1.2,
+        "harvest_week": 16
+    },
+
+    "peas": {
+        "yield": 2.0,
+        "harvest_week": 15
+    },
+
+    "pigeon pea (tur)": {
+        "yield": 1.2,
+        "harvest_week": 24
+    },
+
+    "pearl millet (bajra)": {
+        "yield": 1.5,
+        "harvest_week": 14
+    },
+
+    "safflower": {
+        "yield": 1.0,
+        "harvest_week": 18
+    },
+
+    "rabi sorghum (jowar)": {
+        "yield": 1.2,
+        "harvest_week": 18
+    }
+    }
+
+
+    crop_key = crop_name.lower().strip()
+
+    crop_info = crop_yield_data.get(crop_key)
+
+
+    if crop_info:
+
+        harvest_week = crop_info["harvest_week"]
+
+
+    # -------------------------------------------------
+    # CHECK IF FINAL WEEK HAS BEEN REACHED
+    # -------------------------------------------------
+
+        if crop_week >= harvest_week:
+
+        # -------------------------------------------------
+        # GET YIELD
+        # -------------------------------------------------
+
+            yield_data = farm_data.get(
+            "yield",
+            {}
+            )
+
+            final_yield_tonnes = yield_data.get(
+            "total_yield_tonnes"
+            )
+
+
+        # -------------------------------------------------
+        # FALLBACK YIELD
+        # -------------------------------------------------
+
+            if final_yield_tonnes is None:
+
+                crop_settings = farm_data.get(
+                "crop",
+                {}
+                )   
+
+                farm_area = crop_settings.get(
+                "farm_area"
+                )
+
+                if farm_area:
+
+                    farm_area_hectare = (
+                    float(farm_area)
+                    * 0.404686
+                    )
+
+                    final_yield_tonnes = (
+                    crop_info["yield"]
+                    * farm_area_hectare
+                    )
+
+                    final_yield_tonnes = round(
+                    final_yield_tonnes,
+                    2
+                    )
+
+
+        # -------------------------------------------------
+        # COMPLETE HARVEST
+        # -------------------------------------------------
+
+            if final_yield_tonnes is not None:
+
+                harvest_date = datetime.now().strftime(
+                "%d-%m-%Y %H:%M"
+                )
+
+
+                connection = get_db_connection()
+
+
+            # Save harvest record
+                connection.execute("""
+                    INSERT INTO harvests
+                (
+                    crop_name,
+                    harvest_week,
+                    total_yield_tonnes,
+                    harvest_date
+                )
+                VALUES (?, ?, ?, ?)
+            """, (
+                crop_name,
+                harvest_week,
+                final_yield_tonnes,
+                harvest_date
+                ))
+
+
+            # -------------------------------------------------
+            # DELETE WEEKLY MONITORING RECORDS
+            # -------------------------------------------------
+
+                if crop_key in [
+                "soybean",
+                "soyabean"
+                ]:
+
+                    connection.execute("""
+                    DELETE FROM monitoring
+                    WHERE LOWER(crop_name)
+                    IN ('soybean', 'soyabean')
+                    """)
+
+                else:
+
+                    connection.execute("""
+                    DELETE FROM monitoring
+                    WHERE LOWER(crop_name) = LOWER(?)
+                """, (
+                    crop_name,
+                    ))
+
+
+                connection.commit()
+
+                connection.close()
+
+
+            # -------------------------------------------------
+            # REMOVE FROM MEMORY
+            # -------------------------------------------------
+
+                if crop_key in [
+                "soybean",
+                "soyabean"
+            ]:
+
+                    monitoring_records[:] = [
+
+                    r for r in monitoring_records
+
+                    if r.get(
+                        "crop_name",
+                        ""
+                    ).lower()
+                    not in [
+                        "soybean",
+                        "soyabean"
+                    ]
+
+                    ]
+
+
+                    farm_data["monitoring"] = [
+
+                    r for r in farm_data.get(
+                        "monitoring",
+                        []
+                    )
+
+                        if r.get(
+                        "crop_name","").lower()not in["soybean","soyabean"]
+
+                    ]
+
+                else:
+
+                    monitoring_records[:] = [
+
+                    r for r in monitoring_records
+
+                        if r.get(
+                        "crop_name",
+                        ""
+                    ).lower()
+                    != crop_key
+
+                    ]
+
+
+                    farm_data["monitoring"] = [
+
+                    r for r in farm_data.get(
+                        "monitoring",
+                        []
+                    )
+
+                        if r.get(
+                        "crop_name",
+                        ""
+                    ).lower()
+                    != crop_key
+
+                    ]
+
+
+            # -------------------------------------------------
+            # SAVE HARVEST INFORMATION
+            # -------------------------------------------------
+
+            farm_data["harvest"] = {
+
+                "crop_name":
+                    crop_name,
+
+                "harvest_week":
+                    harvest_week,
+
+                "total_yield_tonnes":
+                    final_yield_tonnes,
+
+                "harvest_date":
+                    harvest_date
+
+            }
 
 
     # =====================================================
@@ -3325,9 +3848,17 @@ def history():
 
     connection = get_db_connection()
 
+    # Weekly monitoring records
     records = connection.execute("""
         SELECT *
         FROM monitoring
+        ORDER BY id DESC
+    """).fetchall()
+
+    # Harvest records
+    harvests = connection.execute("""
+        SELECT *
+        FROM harvests
         ORDER BY id DESC
     """).fetchall()
 
@@ -3335,7 +3866,8 @@ def history():
 
     return render_template(
         "history.html",
-        records=records
+        records=records,
+        harvests=harvests
     )
 
 
